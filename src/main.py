@@ -5,14 +5,14 @@ from datetime import datetime
 
 from dotenv import load_dotenv
 
-from .config import Config
+from .config import Config, load_config
 from .database.repository import Repository, Contact, Message
 from .telegram.client import TelegramClient
 from .telegram.message_fetcher import MessageFetcher
 from .ai.qwen_oauth import QwenClient
 from .ai.style_analyzer import StyleAnalyzer
 from .ai.response_generator import ResponseGenerator
-from .ui.menu import MenuUI
+from .ui.menu import MenuUI, console
 
 
 # Configure logging at the entry point
