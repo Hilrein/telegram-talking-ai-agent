@@ -52,7 +52,7 @@ async def async_main(selected_model: str):
                 for contact in contacts:
                     await repo.upsert_contact(contact)
                 
-                selected = MenuUI.select_contact(contacts)
+                selected = await MenuUI.select_contact(contacts)
                 if not selected:
                     console.print("[dim]Cancelled.[/dim]")
                     return 0
@@ -157,7 +157,7 @@ async def run_chat_mode(
             )
             
             while True:
-                action = MenuUI.show_generated_response(current_response)
+                action = await MenuUI.show_generated_response(current_response)
                 
                 if action == "send":
                     await tg_client.send_message(contact.telegram_id, current_response)
@@ -173,7 +173,7 @@ async def run_chat_mode(
                     break 
                     
                 elif action == "edit":
-                    edited = MenuUI.edit_response(current_response)
+                    edited = await MenuUI.edit_response(current_response)
                     if edited.strip():
                         current_response = edited
                         
@@ -203,7 +203,7 @@ async def run_chat_mode(
                         contact_name=contact.display_name,
                         count=3
                     )
-                    selected = MenuUI.select_alternative(options)
+                    selected = await MenuUI.select_alternative(options)
                     if selected:
                         current_response = selected
                         await tg_client.send_message(contact.telegram_id, current_response)

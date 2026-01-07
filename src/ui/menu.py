@@ -27,7 +27,7 @@ class MenuUI:
         console.print()
     
     @staticmethod
-    def select_contact(contacts: list[Contact]) -> Optional[Contact]:
+    async def select_contact(contacts: list[Contact]) -> Optional[Contact]:
         if not contacts:
             console.print("[red]No contacts found![/red]")
             return None
@@ -43,12 +43,12 @@ class MenuUI:
         
         choices.append(Choice(value=None, name="← Cancel"))
         
-        result = inquirer.select(
+        result = await inquirer.select(
             message="Select contact to chat with:",
             choices=choices,
             pointer="→",
             amark="✓",
-        ).execute()
+        ).execute_async()
         
         return result
     
@@ -92,7 +92,7 @@ class MenuUI:
         console.print()
     
     @staticmethod
-    def show_generated_response(text: str, options: Optional[list[str]] = None) -> str:
+    async def show_generated_response(text: str, options: Optional[list[str]] = None) -> str:
         console.print("\n[bold yellow]📝 Generated Response:[/bold yellow]")
         console.print(Panel(text, border_style="yellow", padding=(0, 1)))
         
@@ -110,32 +110,32 @@ class MenuUI:
         
         choices.append(Choice(value="skip", name="✗ Skip (don't respond)"))
         
-        return inquirer.select(
+        return await inquirer.select(
             message="What would you like to do?",
             choices=choices,
             pointer="→",
             amark="✓",
-        ).execute()
+        ).execute_async()
     
     @staticmethod
-    def edit_response(current: str) -> str:
-        return inquirer.text(
+    async def edit_response(current: str) -> str:
+        return await inquirer.text(
             message="Edit response:",
             default=current,
             multiline=True,
-        ).execute()
+        ).execute_async()
     
     @staticmethod
-    def select_alternative(options: list[str]) -> Optional[str]:
+    async def select_alternative(options: list[str]) -> Optional[str]:
         choices = [Choice(value=opt, name=opt[:80] + "..." if len(opt) > 80 else opt) for opt in options]
         choices.append(Choice(value=None, name="← Back"))
         
-        return inquirer.select(
+        return await inquirer.select(
             message="Select alternative:",
             choices=choices,
             pointer="→",
             amark="✓",
-        ).execute()
+        ).execute_async()
     
     @staticmethod
     def show_style_profile(style: dict) -> None:
