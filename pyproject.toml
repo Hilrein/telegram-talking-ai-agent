@@ -11,6 +11,8 @@ dependencies = [
     "rich>=13.7.0",
     "InquirerPy>=0.3.4",
     "python-dotenv>=1.0.0",
+    "google-generativeai>=0.3.0",
+    "google-auth-oauthlib>=1.0.0",
 ]
 
 [project.optional-dependencies]

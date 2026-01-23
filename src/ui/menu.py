@@ -2,12 +2,14 @@ from typing import Optional
 
 from InquirerPy import inquirer
 from InquirerPy.base.control import Choice
+from InquirerPy.separator import Separator
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
+from rich.spinner import Spinner
 
-from ..config import QWEN_MODELS
+from ..config import QWEN_MODELS, GEMINI_MODELS
 from ..database.repository import Contact
 
 
@@ -53,19 +55,25 @@ class MenuUI:
         return result
     
     @staticmethod
-    def select_model(default: str = "qwen3-max") -> str:
+    async def select_model(default: str = "qwen3-max") -> str:
         choices = []
+        choices.append(Separator("--- Qwen Models ---"))
         for model_id, description in QWEN_MODELS:
             label = f"{model_id} - {description}"
             choices.append(Choice(value=model_id, name=label))
+            
+        choices.append(Separator("--- Gemini Models ---"))
+        for model_id, description in GEMINI_MODELS:
+            label = f"{model_id} - {description}"
+            choices.append(Choice(value=model_id, name=label))
         
-        result = inquirer.select(
+        result = await inquirer.select(
             message="Select AI model:",
             choices=choices,
             default=default,
             pointer="→",
             amark="✓",
-        ).execute()
+        ).execute_async()
         
         return result
     
@@ -73,6 +81,36 @@ class MenuUI:
     def confirm(message: str, default: bool = True) -> bool:
         return inquirer.confirm(message=message, default=default).execute()
     
+    @staticmethod
+    def create_chat_row(
+        sender: str,
+        user_text: str,
+        ai_text: Optional[str] = None,
+        is_loading: bool = False,
+        timestamp: Optional[str] = None
+    ) -> Table:
+        grid = Table.grid(expand=True, padding=(0, 2))
+        grid.add_column(ratio=1)
+        grid.add_column(ratio=1)
+        
+        # User Panel (Left)
+        user_header = f"[bold blue]{sender}[/]"
+        if timestamp:
+            user_header += f" [dim]{timestamp}[/dim]"
+        user_panel = Panel(user_text, title=user_header, border_style="blue")
+        
+        # AI Panel (Right)
+        if is_loading:
+            ai_content = Spinner("dots", text="Thinking...", style="yellow")
+            ai_panel = Panel(ai_content, title="[bold yellow]AI Agent[/]", border_style="yellow")
+        elif ai_text is not None:
+            ai_panel = Panel(ai_text, title="[bold yellow]AI Agent[/]", border_style="yellow")
+        else:
+            ai_panel = Panel("", title="[bold yellow]AI Agent[/]", border_style="dim yellow")
+            
+        grid.add_row(user_panel, ai_panel)
+        return grid
+
     @staticmethod
     def show_message(
         sender: str,
@@ -92,9 +130,16 @@ class MenuUI:
         console.print()
     
     @staticmethod
-    async def show_generated_response(text: str, options: Optional[list[str]] = None) -> str:
-        console.print("\n[bold yellow]📝 Generated Response:[/bold yellow]")
-        console.print(Panel(text, border_style="yellow", padding=(0, 1)))
+    async def show_generated_response(
+        text: str, 
+        options: Optional[list[str]] = None,
+        show_panel: bool = True
+    ) -> str:
+        if show_panel:
+            console.print("\n[bold yellow]📝 Generated Response:[/bold yellow]")
+            console.print(Panel(text, border_style="yellow", padding=(0, 1)))
+        else:
+            console.print() # Just a spacer
         
         if options:
             console.print("\n[dim]Alternative responses available[/dim]")
@@ -136,6 +181,40 @@ class MenuUI:
             pointer="→",
             amark="✓",
         ).execute_async()
+
+    @staticmethod
+    async def select_start_action() -> str:
+        choices = [
+            Choice(value="reply_incoming", name="Reply to last incoming message"),
+            Choice(value="reply_outgoing", name="Reply to my last message"),
+            Choice(value="wait", name="Wait for new messages"),
+        ]
+        
+        return await inquirer.select(
+            message="Starting action:",
+            choices=choices,
+            default="wait",
+            pointer="→",
+            amark="✓",
+        ).execute_async()
+    
+    @staticmethod
+    async def ask_auto_reply() -> bool:
+        return await inquirer.confirm(
+            message="Enable auto-reply?",
+            default=False
+        ).execute_async()
+
+    @staticmethod
+    async def ask_wait_time() -> int:
+        result = await inquirer.number(
+            message="Average wait time (seconds):",
+            min_allowed=0,
+            max_allowed=300,
+            default=5,
+            validate=lambda x: x.isdigit() and int(x) >= 0
+        ).execute_async()
+        return int(result)
     
     @staticmethod
     def show_style_profile(style: dict) -> None:

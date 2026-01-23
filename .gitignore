@@ -10,16 +10,38 @@ env/
 
 # Environment variables
 .env
+.env.*
+!.env.example
 
-# Data files
+# Data files (sessions, databases)
 data/*.db
 data/*.session
+*.session
+
+# Google OAuth secrets
+client_secret.json
+client_secret*.json
+*_secret.json
+credentials.json
+
+# Build artifacts
+*.egg-info/
+dist/
+build/
+*.egg
 
 # IDE
 .idea/
 .vscode/
 *.swp
+*.swo
 
 # OS
 .DS_Store
 Thumbs.db
+
+# Logs
+*.log
+
+# Qwen OAuth cache (if stored locally)
+.qwen/

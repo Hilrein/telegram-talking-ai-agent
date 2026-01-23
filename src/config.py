@@ -12,6 +12,7 @@ class Config:
     tg_api_id: int
     tg_api_hash: str
     qwen_default_model: str
+    google_client_secret_path: str
     data_dir: Path
     
     @property
@@ -44,6 +45,7 @@ class Config:
             tg_api_id=api_id,
             tg_api_hash=api_hash,
             qwen_default_model=os.getenv("QWEN_MODEL", "qwen-max"),
+            google_client_secret_path=os.getenv("GOOGLE_CLIENT_SECRET", "client_secret.json"),
             data_dir=data_dir
         )
 
@@ -78,10 +80,18 @@ def load_config() -> Config:
         tg_api_id=int(api_id),
         tg_api_hash=api_hash,
         qwen_default_model=qwen_model,
+        google_client_secret_path=os.getenv("GOOGLE_CLIENT_SECRET", "client_secret.json"),
         data_dir=data_dir,
     )
 
 
 QWEN_MODELS = [
     ("coder-model", "Standard model (Required for OAuth)"),
+]
+
+GEMINI_MODELS = [
+    ("gemini-3-pro", "Gemini 3 Pro (Google)"),
+    ("gemini-3-flash", "Gemini 3 Flash (Google)"),
+    ("gemini-2.5-pro", "Gemini 2.5 Pro (Google)"),
+    ("gemini-2.5-flash", "Gemini 2.5 Flash (Google)"),
 ]

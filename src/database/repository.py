@@ -50,6 +50,7 @@ class OAuthToken:
     access_token: str
     refresh_token: str
     expires_at: datetime
+    provider: str = "qwen"
 
 
 class Repository:
@@ -194,31 +195,33 @@ class Repository:
     async def save_token(self, token: OAuthToken) -> None:
         await self._conn.execute(
             """
-            INSERT INTO oauth_tokens (id, access_token, refresh_token, expires_at, updated_at)
-            VALUES (1, ?, ?, ?, CURRENT_TIMESTAMP)
-            ON CONFLICT(id) DO UPDATE SET
+            INSERT INTO oauth_tokens (provider, access_token, refresh_token, expires_at, updated_at)
+            VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(provider) DO UPDATE SET
                 access_token = excluded.access_token,
                 refresh_token = excluded.refresh_token,
                 expires_at = excluded.expires_at,
                 updated_at = CURRENT_TIMESTAMP
             """,
-            (token.access_token, token.refresh_token, token.expires_at.isoformat())
+            (token.provider, token.access_token, token.refresh_token, token.expires_at.isoformat())
         )
         await self._conn.commit()
     
-    async def get_token(self) -> Optional[OAuthToken]:
+    async def get_token(self, provider: str = "qwen") -> Optional[OAuthToken]:
         cursor = await self._conn.execute(
-            "SELECT access_token, refresh_token, expires_at FROM oauth_tokens WHERE id = 1"
+            "SELECT access_token, refresh_token, expires_at FROM oauth_tokens WHERE provider = ?",
+            (provider,)
         )
         row = await cursor.fetchone()
         if row:
             return OAuthToken(
                 access_token=row["access_token"],
                 refresh_token=row["refresh_token"],
-                expires_at=datetime.fromisoformat(row["expires_at"])
+                expires_at=datetime.fromisoformat(row["expires_at"]),
+                provider=provider
             )
         return None
     
-    async def delete_token(self) -> None:
-        await self._conn.execute("DELETE FROM oauth_tokens WHERE id = 1")
+    async def delete_token(self, provider: str = "qwen") -> None:
+        await self._conn.execute("DELETE FROM oauth_tokens WHERE provider = ?", (provider,))
         await self._conn.commit()

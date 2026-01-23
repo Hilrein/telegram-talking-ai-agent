@@ -1,9 +1,11 @@
+LICENSE
 README.md
 pyproject.toml
 src/__init__.py
 src/config.py
 src/main.py
 src/ai/__init__.py
+src/ai/google_oauth.py
 src/ai/qwen_oauth.py
 src/ai/response_generator.py
 src/ai/style_analyzer.py

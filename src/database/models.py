@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS style_profiles (
 );
 
 CREATE TABLE IF NOT EXISTS oauth_tokens (
-    id INTEGER PRIMARY KEY CHECK (id = 1),
+    provider TEXT PRIMARY KEY,
     access_token TEXT NOT NULL,
     refresh_token TEXT NOT NULL,
     expires_at TIMESTAMP NOT NULL,
