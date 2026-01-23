@@ -90,8 +90,8 @@ QWEN_MODELS = [
 ]
 
 GEMINI_MODELS = [
-    ("gemini-3-pro", "Gemini 3 Pro (Google)"),
-    ("gemini-3-flash", "Gemini 3 Flash (Google)"),
-    ("gemini-2.5-pro", "Gemini 2.5 Pro (Google)"),
-    ("gemini-2.5-flash", "Gemini 2.5 Flash (Google)"),
+    ("gemini-3-pro-preview", "Gemini 3 Pro Preview"),
+    ("gemini-3-flash-preview", "Gemini 3 Flash Preview"),
+    ("gemini-2.5-pro", "Gemini 2.5 Pro"),
+    ("gemini-2.5-flash", "Gemini 2.5 Flash"),
 ]
