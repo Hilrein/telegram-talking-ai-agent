@@ -7,13 +7,30 @@ from typing import Optional
 from dotenv import load_dotenv
 
 
+NVIDIA_DEFAULT_BASE_URL = "https://integrate.api.nvidia.com/v1"
+NVIDIA_DEFAULT_MODEL = "nvidia/llama-3.1-nemotron-ultra-253b-v1"
+
+
 @dataclass
 class Config:
-    tg_api_id: int
-    tg_api_hash: str
-    qwen_default_model: str
-    google_client_secret_path: str
     data_dir: Path
+    # NVIDIA NIM settings
+    nvidia_api_key: Optional[str] = None
+    nvidia_base_url: str = NVIDIA_DEFAULT_BASE_URL
+    nvidia_model: str = NVIDIA_DEFAULT_MODEL
+    # Business bot settings
+    bot_token: Optional[str] = None
+    business_owner_chat_id: Optional[int] = None
+    pending_timeout_minutes: int = 10
+    business_ai_model: str = NVIDIA_DEFAULT_MODEL
+    business_style_prompt: str = ""
+    # Context memory settings
+    context_limit: int = 30
+    context_months: int = 3
+    owner_name: str = ""
+    # Mini App settings
+    miniapp_port: int = 8000
+    ngrok_authtoken: str = ""
     
     @property
     def db_path(self) -> Path:
@@ -26,27 +43,32 @@ class Config:
     @classmethod
     def load(cls) -> Optional["Config"]:
         load_dotenv()
-        
-        api_id = os.getenv("TG_API_ID")
-        api_hash = os.getenv("TG_API_HASH")
-        
-        if not api_id or not api_hash:
-            return None
-            
-        try:
-            api_id = int(api_id)
-        except ValueError:
-            return None
             
         data_dir = Path(os.getenv("DATA_DIR", "data"))
         data_dir.mkdir(parents=True, exist_ok=True)
         
+        owner_chat_id_str = os.getenv("BUSINESS_OWNER_CHAT_ID")
+        owner_chat_id = int(owner_chat_id_str) if owner_chat_id_str else None
+
+        timeout_str = os.getenv("PENDING_TIMEOUT_MINUTES", "10")
+        try:
+            timeout = int(timeout_str)
+        except ValueError:
+            timeout = 10
+
         return cls(
-            tg_api_id=api_id,
-            tg_api_hash=api_hash,
-            qwen_default_model=os.getenv("QWEN_MODEL", "qwen-max"),
-            google_client_secret_path=os.getenv("GOOGLE_CLIENT_SECRET", "client_secret.json"),
-            data_dir=data_dir
+            data_dir=data_dir,
+            nvidia_api_key=os.getenv("NVIDIA_API_KEY"),
+            nvidia_base_url=os.getenv("NVIDIA_BASE_URL", NVIDIA_DEFAULT_BASE_URL),
+            nvidia_model=os.getenv("NVIDIA_MODEL", "meta/llama-3.3-70b-instruct"),
+            bot_token=os.getenv("BOT_TOKEN"),
+            business_owner_chat_id=owner_chat_id,
+            pending_timeout_minutes=timeout,
+            business_ai_model=os.getenv(
+                "BUSINESS_AI_MODEL",
+                os.getenv("NVIDIA_MODEL", "meta/llama-3.3-70b-instruct")
+            ),
+            business_style_prompt=os.getenv("BUSINESS_STYLE_PROMPT", ""),
         )
 
 
@@ -59,39 +81,49 @@ def load_config() -> Config:
     else:
         load_dotenv()
     
-    api_id = os.getenv("TG_API_ID")
-    api_hash = os.getenv("TG_API_HASH")
+
     
-    if not api_id or not api_hash:
-        raise ValueError(
-            "TG_API_ID and TG_API_HASH must be set in .env file.\n"
-            "Get them from https://my.telegram.org"
-        )
-    
-    api_id = api_id.strip().strip('"').strip("'")
-    api_hash = api_hash.strip().strip('"').strip("'")
-    
-    qwen_model = os.getenv("QWEN_DEFAULT_MODEL", "coder-model")
     data_dir = Path(os.getenv("DATA_DIR", current / "data"))
     
     data_dir.mkdir(parents=True, exist_ok=True)
+
+    owner_chat_id_str = os.getenv("BUSINESS_OWNER_CHAT_ID")
+    owner_chat_id = int(owner_chat_id_str) if owner_chat_id_str else None
+
+    timeout_str = os.getenv("PENDING_TIMEOUT_MINUTES", "10")
+    try:
+        timeout = int(timeout_str)
+    except ValueError:
+        timeout = 10
     
     return Config(
-        tg_api_id=int(api_id),
-        tg_api_hash=api_hash,
-        qwen_default_model=qwen_model,
-        google_client_secret_path=os.getenv("GOOGLE_CLIENT_SECRET", "client_secret.json"),
         data_dir=data_dir,
+        nvidia_api_key=os.getenv("NVIDIA_API_KEY"),
+        nvidia_base_url=os.getenv("NVIDIA_BASE_URL", NVIDIA_DEFAULT_BASE_URL),
+        nvidia_model=os.getenv("NVIDIA_MODEL", "meta/llama-3.3-70b-instruct"),
+        bot_token=os.getenv("BOT_TOKEN"),
+        business_owner_chat_id=owner_chat_id,
+        pending_timeout_minutes=timeout,
+        business_ai_model=os.getenv(
+            "BUSINESS_AI_MODEL",
+            os.getenv("NVIDIA_MODEL", "meta/llama-3.3-70b-instruct")
+        ),
+        business_style_prompt=os.getenv("BUSINESS_STYLE_PROMPT", ""),
+        context_limit=int(os.getenv("CONTEXT_LIMIT", "30")),
+        context_months=int(os.getenv("CONTEXT_MONTHS", "3")),
+        owner_name=os.getenv("OWNER_NAME", ""),
+        miniapp_port=int(os.getenv("MINIAPP_PORT", "8000")),
+        ngrok_authtoken=os.getenv("NGROK_AUTHTOKEN", ""),
     )
 
 
-QWEN_MODELS = [
-    ("coder-model", "Standard model (Required for OAuth)"),
-]
-
-GEMINI_MODELS = [
-    ("gemini-3-pro-preview", "Gemini 3 Pro Preview"),
-    ("gemini-3-flash-preview", "Gemini 3 Flash Preview"),
-    ("gemini-2.5-pro", "Gemini 2.5 Pro"),
-    ("gemini-2.5-flash", "Gemini 2.5 Flash"),
+NVIDIA_MODELS = [
+    ("nvidia/llama-3.1-nemotron-ultra-253b-v1", "Nemotron Ultra 253B"),
+    ("nvidia/llama-3.3-nemotron-super-49b-v1", "Nemotron Super 49B"),
+    ("nvidia/llama-3.1-nemotron-nano-8b-v1", "Nemotron Nano 8B"),
+    ("meta/llama-3.3-70b-instruct", "Llama 3.3 70B Instruct"),
+    ("meta/llama-3.1-8b-instruct", "Llama 3.1 8B Instruct"),
+    ("deepseek-ai/deepseek-v4-flash", "DeepSeek V4 Flash"),
+    ("qwen/qwq-32b", "QwQ 32B"),
+    ("mistralai/mistral-nemotron", "Mistral Nemotron"),
 ]

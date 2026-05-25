@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>AI Agent</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Design Tokens & Clean Light Aesthetic ─────────────────── */
+    :root {
+      --bg: #F5F5F7;
+      --card-bg: #FFFFFF;
+      --text-primary: #111111;
+      --text-secondary: #666666;
+      --text-muted: #999999;
+      --accent: #007AFF;
+      --accent-hover: #0062cc;
+      --btn-secondary-bg: #F0F0F0;
+      --btn-secondary-hover: #E5E5E5;
+      
+      --safe-bottom: env(safe-area-inset-bottom, 16px);
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    /* Support Telegram Theme Colors if available */
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: var(--tg-theme-bg-color, #F5F5F7);
+        --text-primary: var(--tg-theme-text-color, #111111);
+        --accent: var(--tg-theme-link-color, #007AFF);
+      }
+    }
+
+    /* ── Reset & Global ────────────────────────────────────────── */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+    body {
+      font-family: var(--font);
+      background-color: var(--bg);
+      color: var(--text-primary);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+      display: flex;
+      justify-content: center;
+      overflow-x: hidden;
+    }
+
+    /* Scrollbar override (completely hidden on mobile) */
+    ::-webkit-scrollbar {
+      display: none;
+    }
+    html {
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+
+    #app {
+      width: 100%;
+      max-width: 600px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background-color: var(--bg);
+      padding-bottom: calc(var(--safe-bottom) + 24px);
+    }
+
+    /* ── Header ────────────────────────────────────────────────── */
+    .header {
+      background-color: var(--card-bg);
+      padding: 24px 20px 12px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .logo {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.4px;
+      color: var(--text-primary);
+    }
+    .header-sub {
+      font-size: 9px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+    }
+
+    /* ── Tabs ──────────────────────────────────────────────────── */
+    .tabs {
+      display: flex;
+      background-color: var(--card-bg);
+      padding: 0 20px;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    }
+    .tab {
+      padding: 14px 0;
+      margin-right: 24px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: color 0.2s ease, border-bottom-color 0.2s ease;
+      outline: none;
+    }
+    .tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+      font-weight: 600;
+    }
+
+    /* ── Panels ────────────────────────────────────────────────── */
+    .panel {
+      display: none;
+      padding: 20px;
+    }
+    .panel.active {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+    .section-title {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+    }
+
+    /* Minimal Refresh Button */
+    .btn-refresh {
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      color: var(--text-secondary);
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 0.2s ease, transform 0.2s ease;
+    }
+    .btn-refresh:active {
+      transform: scale(0.9);
+      color: var(--text-primary);
+    }
+    .btn-refresh.spinning svg {
+      animation: spin 0.8s linear infinite;
+    }
+
+    /* ── Contacts List ─────────────────────────────────────────── */
+    .contacts-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .contact-card {
+      background-color: var(--card-bg);
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.15s ease;
+      cursor: pointer;
+    }
+    .contact-card:active {
+      transform: scale(0.98);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+    }
+
+    .contact-card-top {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 600;
+      flex-shrink: 0;
+      color: #FFFFFF;
+      text-shadow: 0 1px 1px rgba(0,0,0,0.1);
+    }
+
+    .contact-info {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .contact-name {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .contact-meta {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .contact-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    /* Clean Card Action Buttons */
+    .btn-action {
+      height: 32px;
+      border-radius: 16px;
+      padding: 0 16px;
+      font-family: var(--font);
+      font-size: 13px;
+      font-weight: 500;
+      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }
+    .btn-action-primary {
+      background-color: rgba(0, 122, 255, 0.08);
+      color: var(--accent);
+    }
+    .btn-action-primary:active {
+      background-color: rgba(0, 122, 255, 0.15);
+    }
+    .btn-action-secondary {
+      background-color: var(--btn-secondary-bg);
+      color: var(--text-primary);
+    }
+    .btn-action-secondary:active {
+      background-color: var(--btn-secondary-hover);
+    }
+
+    /* ── Import Form ───────────────────────────────────────────── */
+    .import-form {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .field label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .field input[type="number"] {
+      background-color: var(--card-bg);
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-family: var(--font);
+      font-size: 14px;
+      color: var(--text-primary);
+      outline: none;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .field input[type="number"]:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+    }
+    .field-hint {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .file-drop {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      padding: 32px 20px;
+      background-color: var(--card-bg);
+      border: 1.5px dashed rgba(0, 0, 0, 0.12);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background-color 0.2s ease, border-color 0.2s ease;
+      text-align: center;
+    }
+    .file-drop:hover, .file-drop.drag-over {
+      border-color: var(--accent);
+      background-color: rgba(0, 122, 255, 0.02);
+    }
+    .file-drop.has-file {
+      border-color: var(--accent);
+      border-style: solid;
+      background-color: rgba(0, 122, 255, 0.04);
+    }
+    .file-icon { font-size: 24px; }
+    #file-label { font-size: 13px; color: var(--text-secondary); }
+
+    .btn-submit {
+      padding: 14px 20px;
+      background-color: var(--accent);
+      border: none;
+      border-radius: 10px;
+      color: #FFFFFF;
+      font-family: var(--font);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s ease;
+    }
+    .btn-submit:active { opacity: 0.85; }
+    .btn-submit:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* ── Import Status ─────────────────────────────────────────── */
+    .import-status {
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 500;
+      border: 1px solid rgba(0, 0, 0, 0.06);
+      background-color: var(--card-bg);
+      text-align: center;
+    }
+    .import-status.success {
+      color: #248A3D;
+      border-color: rgba(36, 138, 61, 0.15);
+      background-color: rgba(36, 138, 61, 0.05);
+    }
+    .import-status.error {
+      color: #CF3C3C;
+      border-color: rgba(207, 60, 60, 0.15);
+      background-color: rgba(207, 60, 60, 0.05);
+    }
+
+    /* ── Loading & States ──────────────────────────────────────── */
+    .loading, .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 60px 20px;
+      color: var(--text-secondary);
+      font-size: 14px;
+      text-align: center;
+    }
+    .spinner {
+      width: 24px;
+      height: 24px;
+      border: 2px solid rgba(0, 0, 0, 0.06);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+    .empty-icon {
+      font-size: 40px;
+      margin-bottom: 4px;
+      opacity: 0.6;
+    }
+
+    /* ── History Modal (iOS Blur Action Sheet Look) ────────────── */
+    .modal {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: rgba(240, 240, 245, 0.8);
+      backdrop-filter: blur(20px);
+      z-index: 1000;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    @media (min-width: 600px) {
+      .modal {
+        align-items: center;
+        padding: 20px;
+      }
+    }
+    .modal-content {
+      background-color: #FFFFFF;
+      border-top-left-radius: 20px;
+      border-top-right-radius: 20px;
+      width: 100%;
+      max-width: 550px;
+      height: 85vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 -4px 30px rgba(0, 0, 0, 0.08);
+      animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    @media (min-width: 600px) {
+      .modal-content {
+        border-radius: 16px;
+        height: 75vh;
+        border: 1px solid rgba(0, 0, 0, 0.05);
+      }
+    }
+    .modal-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .modal-header h2 {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    .btn-close-history {
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      color: var(--text-secondary);
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 0.15s;
+    }
+    .btn-close-history:hover {
+      color: var(--text-primary);
+    }
+
+    .history-list {
+      padding: 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      flex: 1;
+    }
+    .msg-bubble {
+      max-width: 75%;
+      padding: 10px 14px;
+      border-radius: 16px;
+      font-size: 14px;
+      line-height: 1.45;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .msg-bubble.user {
+      align-self: flex-start;
+      background-color: var(--bg);
+      color: var(--text-primary);
+      border-bottom-left-radius: 4px;
+    }
+    .msg-bubble.assistant {
+      align-self: flex-end;
+      background-color: var(--accent);
+      color: #FFFFFF;
+      border-bottom-right-radius: 4px;
+    }
+    .msg-meta {
+      font-size: 10px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+    .msg-bubble.assistant .msg-meta {
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    /* ── Utilities & Animations ───────────────────────────────── */
+    .hidden { display: none !important; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <!-- Header -->
+    <header class="header">
+      <span class="logo">AI Agent</span>
+      <span class="header-sub">Управление контекстом</span>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="tabs">
+      <button class="tab active" data-tab="contacts" id="tab-contacts">Контакты</button>
+      <button class="tab" data-tab="import" id="tab-import">Импорт</button>
+    </nav>
+
+    <!-- Contacts Tab -->
+    <section id="panel-contacts" class="panel active">
+      <div class="panel-header">
+        <span class="section-title">Диалоги</span>
+        <button class="btn-refresh" id="btn-refresh" title="Обновить">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+          </svg>
+        </button>
+      </div>
+      <div id="contacts-list" class="contacts-list">
+        <div class="loading">
+          <div class="spinner"></div>
+          <span>Загрузка диалогов…</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Import Tab -->
+    <section id="panel-import" class="panel">
+      <div class="panel-header">
+        <span class="section-title">Импорт истории чата</span>
+      </div>
+      <div class="import-form">
+        <div class="field">
+          <label for="input-chat-id">Telegram Chat ID</label>
+          <input id="input-chat-id" type="number" placeholder="например: 123456789" />
+          <span class="field-hint">Укажите числовой идентификатор чата</span>
+        </div>
+        <div class="field">
+          <label>Файл экспорта (result.json)</label>
+          <label class="file-drop" id="file-drop" for="input-file">
+            <span class="file-icon">📂</span>
+            <span id="file-label">Выберите или перетащите файл</span>
+            <input id="input-file" type="file" accept=".json" hidden />
+          </label>
+        </div>
+        <button class="btn-submit" id="btn-import">Импортировать</button>
+        <div id="import-status" class="import-status hidden"></div>
+      </div>
+    </section>
+
+    <!-- History Modal -->
+    <div id="history-modal" class="modal hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>История сообщений</h2>
+          <button id="btn-close-history" class="btn-close-history" title="Закрыть">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+        <div id="history-list" class="history-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ── Tab routing ──────────────────────────────────────────── */
+    document.querySelectorAll('.tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const target = btn.dataset.tab;
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(`panel-${target}`).classList.add('active');
+      });
+    });
+
+    /* ── Light Soft Gradient Generation for Avatars ───────────── */
+    const gradients = [
+      'linear-gradient(135deg, #FF9A9E 0%, #FECFEF 100%)',
+      'linear-gradient(135deg, #A1C4FD 0%, #C2E9FB 100%)',
+      'linear-gradient(135deg, #84FAB0 0%, #8FD3F4 100%)',
+      'linear-gradient(135deg, #E2EBFC 0%, #CFD9DF 100%)',
+      'linear-gradient(135deg, #F6D365 0%, #FDA085 100%)',
+      'linear-gradient(135deg, #F8E6FE 0%, #D4A9FE 100%)',
+      'linear-gradient(135deg, #C1FCD3 0%, #89F2A1 100%)'
+    ];
+
+    function getAvatarStyle(name) {
+      let hash = 0;
+      for (let i = 0; i < name.length; i++) {
+        hash = name.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      const idx = Math.abs(hash) % gradients.length;
+      return `background: ${gradients[idx]};`;
+    }
+
+    /* ── Contacts ─────────────────────────────────────────────── */
+    async function loadContacts() {
+      const list = document.getElementById('contacts-list');
+      const refreshBtn = document.getElementById('btn-refresh');
+      if (refreshBtn) refreshBtn.classList.add('spinning');
+      
+      list.innerHTML = `
+        <div class="loading">
+          <div class="spinner"></div>
+          <span>Загрузка диалогов…</span>
+        </div>`;
+
+      try {
+        const res = await fetch('/api/contacts');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        renderContacts(data.contacts || []);
+      } catch (e) {
+        list.innerHTML = `
+          <div class="empty-state">
+            <span class="empty-icon">⚠️</span>
+            <span>Ошибка загрузки: ${e.message}</span>
+          </div>`;
+      } finally {
+        if (refreshBtn) refreshBtn.classList.remove('spinning');
+      }
+    }
+
+    function renderContacts(contacts) {
+      const list = document.getElementById('contacts-list');
+      if (!contacts.length) {
+        list.innerHTML = `
+          <div class="empty-state">
+            <span class="empty-icon">💬</span>
+            <span>Нет активных диалогов.<br/>Ожидайте первых сообщений.</span>
+          </div>`;
+        return;
+      }
+
+      list.innerHTML = '';
+      contacts.forEach((c, i) => {
+        const initials = (c.sender_name || '?').charAt(0).toUpperCase();
+        const lastDate = c.last_message_at
+          ? new Date(c.last_message_at).toLocaleDateString('ru', { day: 'numeric', month: 'short' })
+          : '';
+
+        const card = document.createElement('div');
+        card.className = 'contact-card';
+        card.style.animation = `fadeIn 0.25s ease forwards`;
+        card.style.animationDelay = `${i * 35}ms`;
+        
+        const avatarStyle = getAvatarStyle(c.sender_name || 'Неизвестный');
+
+        card.innerHTML = `
+          <div class="contact-card-top">
+            <div class="avatar" style="${avatarStyle}">${initials}</div>
+            <div class="contact-info">
+              <div class="contact-name">${esc(c.sender_name || 'Неизвестный')}</div>
+              <div class="contact-meta">${c.total_messages} сообщений ${lastDate ? '· ' + lastDate : ''}</div>
+            </div>
+          </div>
+          <div class="contact-actions">
+            <button class="btn-action btn-action-primary btn-history" data-chat-id="${c.chat_id}">История</button>
+            <button class="btn-action btn-action-secondary contact-import-btn" data-chat-id="${c.chat_id}">+ импорт</button>
+          </div>`;
+
+        // Quick-import: pre-fill chat_id and switch to import tab
+        card.querySelector('.contact-import-btn').addEventListener('click', e => {
+          e.stopPropagation();
+          document.getElementById('input-chat-id').value = c.chat_id;
+          document.querySelector('[data-tab="import"]').click();
+        });
+
+        // Open History Modal
+        card.querySelector('.btn-history').addEventListener('click', e => {
+          e.stopPropagation();
+          openHistory(c.chat_id);
+        });
+
+        list.appendChild(card);
+      });
+    }
+
+    document.getElementById('btn-refresh').addEventListener('click', loadContacts);
+
+    /* ── File drop zone ───────────────────────────────────────── */
+    const dropZone = document.getElementById('file-drop');
+    const fileInput = document.getElementById('input-file');
+    const fileLabel = document.getElementById('file-label');
+    let selectedFile = null;
+
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files.length) handleFile(fileInput.files[0]);
+    });
+
+    dropZone.addEventListener('dragover', e => {
+      e.preventDefault();
+      dropZone.classList.add('drag-over');
+    });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
+      if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+    });
+
+    function handleFile(file) {
+      if (!file.name.endsWith('.json')) {
+        showStatus('Пожалуйста, выберите файл .json', 'error');
+        return;
+      }
+      selectedFile = file;
+      fileLabel.textContent = `📄 ${file.name}`;
+      dropZone.classList.add('has-file');
+      hideStatus();
+    }
+
+    /* ── Import form ──────────────────────────────────────────── */
+    document.getElementById('btn-import').addEventListener('click', async () => {
+      const chatId = document.getElementById('input-chat-id').value.trim();
+      const btn = document.getElementById('btn-import');
+
+      if (!chatId) { showStatus('Введите Chat ID', 'error'); return; }
+      if (!selectedFile) { showStatus('Выберите файл result.json', 'error'); return; }
+
+      btn.disabled = true;
+      btn.textContent = 'Импортирую…';
+      hideStatus();
+
+      try {
+        const form = new FormData();
+        form.append('chat_id', chatId);
+        form.append('file', selectedFile);
+
+        const res = await fetch('/api/import', { method: 'POST', body: form });
+        const data = await res.json();
+
+        if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+
+        showStatus(`✅ Импортировано ${data.imported} сообщений`, 'success');
+        selectedFile = null;
+        fileInput.value = '';
+        fileLabel.textContent = 'Выберите или перетащите файл';
+        dropZone.classList.remove('has-file');
+      } catch (e) {
+        showStatus(`❌ Ошибка: ${e.message}`, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Импортировать';
+      }
+    });
+
+    /* ── History Modal ────────────────────────────────────────── */
+    function closeHistory() {
+      const modal = document.getElementById('history-modal');
+      const content = modal.querySelector('.modal-content');
+      
+      content.style.animation = 'slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) reverse forwards';
+      modal.style.transition = 'opacity 0.25s ease';
+      modal.style.opacity = '0';
+      
+      setTimeout(() => {
+        modal.classList.add('hidden');
+        modal.style.opacity = '1';
+        content.style.animation = 'slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards';
+      }, 250);
+    }
+
+    document.getElementById('btn-close-history').addEventListener('click', closeHistory);
+    document.getElementById('history-modal').addEventListener('click', e => {
+      if(e.target.id === 'history-modal') closeHistory();
+    });
+
+    async function openHistory(chatId) {
+      const modal = document.getElementById('history-modal');
+      const list = document.getElementById('history-list');
+      modal.classList.remove('hidden');
+      list.innerHTML = '<div class="loading"><div class="spinner"></div><span>Загрузка истории…</span></div>';
+
+      try {
+        const res = await fetch(`/api/history/${chatId}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        renderHistory(data.messages || []);
+      } catch (e) {
+        list.innerHTML = `<div class="empty-state"><span class="empty-icon">⚠️</span><span>Ошибка загрузки: ${e.message}</span></div>`;
+      }
+    }
+
+    function renderHistory(messages) {
+      const list = document.getElementById('history-list');
+      if (!messages.length) {
+        list.innerHTML = `<div class="empty-state"><span class="empty-icon">💬</span><span>Нет сообщений.</span></div>`;
+        return;
+      }
+
+      list.innerHTML = '';
+      messages.forEach(m => {
+        const bubble = document.createElement('div');
+        bubble.className = `msg-bubble ${m.role === 'user' ? 'user' : 'assistant'}`;
+        const date = new Date(m.created_at).toLocaleString('ru', {
+          day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+        });
+        const sender = m.sender_name || (m.role === 'user' ? 'Пользователь' : 'Агент');
+        
+        bubble.innerHTML = `
+          <div class="msg-meta">${esc(sender)} • ${date}</div>
+          <div class="msg-content">${esc(m.content).replace(/\n/g, '<br/>')}</div>
+        `;
+        list.appendChild(bubble);
+      });
+      
+      // Scroll to bottom
+      list.scrollTop = list.scrollHeight;
+    }
+
+    document.getElementById('btn-close-history').addEventListener('click', () => {
+      document.getElementById('history-modal').classList.add('hidden');
+    });
+
+    /* ── Helpers ──────────────────────────────────────────────── */
+    function showStatus(msg, type) {
+      const el = document.getElementById('import-status');
+      el.textContent = msg;
+      el.className = `import-status ${type}`;
+    }
+    function hideStatus() {
+      const el = document.getElementById('import-status');
+      el.className = 'import-status hidden';
+    }
+    function esc(str) {
+      return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    /* ── Init ─────────────────────────────────────────────────── */
+    loadContacts();
+  </script>
+</body>
+</html>

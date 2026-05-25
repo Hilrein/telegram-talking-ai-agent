@@ -1,2 +1,2 @@
 [console_scripts]
-tg-agent = src.main:main
+tg-agent = src.business.runner:main_business
