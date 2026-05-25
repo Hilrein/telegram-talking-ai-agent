@@ -23,6 +23,7 @@ from ..api_server import app as fastapi_app, configure as configure_api
 from .bot_api import BotApiClient
 from .handler import BusinessHandler
 from .pending_store import PendingStore
+from .audio_service import AudioService
 
 logger = logging.getLogger(__name__)
 console = Console()
@@ -109,6 +110,12 @@ async def run_business_bot() -> int:
             base_url=config.nvidia_base_url,
         )
 
+        audio_service = AudioService(
+            nvidia_api_key=config.nvidia_api_key,
+            cartesia_api_key=config.cartesia_api_key,
+            cartesia_voice_id=config.cartesia_voice_id,
+        )
+
         async with ai_context as ai_client:
             handler = BusinessHandler(
                 bot=bot,
@@ -116,6 +123,7 @@ async def run_business_bot() -> int:
                 ai_client=ai_client,
                 owner_chat_id=config.business_owner_chat_id,
                 pending_store=pending,
+                audio_service=audio_service,
                 style_prompt=config.business_style_prompt,
                 context_limit=config.context_limit,
                 context_months=config.context_months,

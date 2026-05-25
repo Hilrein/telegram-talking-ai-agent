@@ -170,3 +170,35 @@ class BotApiClient:
             action=action,
             business_connection_id=business_connection_id,
         )
+
+    # ── Files & Voice ───────────────────────────────────────────
+
+    async def get_file(self, file_id: str) -> dict:
+        return await self._request("getFile", file_id=file_id)
+
+    async def download_file(self, file_path: str) -> bytes:
+        url = f"{BOT_API_BASE}/file/bot{self.token}/{file_path}"
+        response = await self._http.get(url)
+        response.raise_for_status()
+        return response.content
+
+    async def send_voice(
+        self,
+        chat_id: int | str,
+        voice_bytes: bytes,
+        business_connection_id: Optional[str] = None,
+    ) -> dict:
+        url = f"{self._base_url}/sendVoice"
+        data = {"chat_id": chat_id}
+        if business_connection_id:
+            data["business_connection_id"] = business_connection_id
+            
+        files = {"voice": ("voice.mp3", voice_bytes, "audio/mpeg")}
+        
+        response = await self._http.post(url, data=data, files=files)
+        response_data = response.json()
+        
+        if not response_data.get("ok"):
+            raise RuntimeError(f"Bot API sendVoice error: {response_data}")
+            
+        return response_data.get("result", {})

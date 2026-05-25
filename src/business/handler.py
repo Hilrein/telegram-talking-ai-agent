@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 CB_APPROVE = "biz_approve:"
 CB_REJECT = "biz_reject:"
 CB_REWRITE = "biz_rewrite:"
+CB_APPROVE_VOICE = "biz_appr_voice:"
 
 
 def _user_display_name(user: dict) -> str:
@@ -43,6 +44,9 @@ def _build_approval_keyboard(pending_id: str) -> dict:
                 {"text": "✅ Принять", "callback_data": f"{CB_APPROVE}{pending_id}"},
                 {"text": "❌ Отклонить", "callback_data": f"{CB_REJECT}{pending_id}"},
                 {"text": "✏️ Переписать", "callback_data": f"{CB_REWRITE}{pending_id}"},
+            ],
+            [
+                {"text": "🎤 Ответить голосом", "callback_data": f"{CB_APPROVE_VOICE}{pending_id}"},
             ]
         ]
     }
@@ -58,6 +62,7 @@ class BusinessHandler:
         ai_client,
         owner_chat_id: int,
         pending_store: PendingStore,
+        audio_service,
         style_prompt: str = "",
         context_limit: int = 30,
         context_months: int = 3,
@@ -67,6 +72,7 @@ class BusinessHandler:
         self.ai = ai_client
         self.owner_chat_id = owner_chat_id
         self.pending = pending_store
+        self.audio_service = audio_service
         self.style_prompt = style_prompt
         self.context_limit = context_limit
         self.context_months = context_months
@@ -156,9 +162,26 @@ class BusinessHandler:
         sender_chat_id = message["chat"]["id"]
         owner_name = conn.get("user_name", "Владелец")
         text = message.get("text", "")
+        voice = message.get("voice")
+
+        if voice:
+            try:
+                temp_msg = await self.bot.send_message(self.owner_chat_id, f"⏳ <i>Расшифровываю голосовое от {escape(sender_name)}...</i>")
+                temp_id = temp_msg.get("message_id")
+                
+                file_info = await self.bot.get_file(voice["file_id"])
+                audio_bytes = await self.bot.download_file(file_info["file_path"])
+                transcription = await self.audio_service.transcribe_voice(audio_bytes)
+                text = f"[🎤 Голосовое сообщение] {transcription}"
+                
+                if temp_id:
+                    await self.bot.delete_message(self.owner_chat_id, temp_id)
+            except Exception as e:
+                logger.error("Failed to process voice message: %s", e)
+                return
 
         if not text.strip():
-            logger.info("Non-text business message from %s (skipped)", sender_name)
+            logger.info("Non-text/voice business message from %s (skipped)", sender_name)
             return
 
         # ── Save incoming message to per-user history ───────────
@@ -379,6 +402,70 @@ class BusinessHandler:
 
             await self.pending.remove(pending_id)
             logger.info("Reply approved and sent: id=%s", pending_id)
+
+        # ── APPROVE AS VOICE ────────────────────────────────────
+        elif data.startswith(CB_APPROVE_VOICE):
+            pending_id = data[len(CB_APPROVE_VOICE):]
+            entry = await self.pending.get(pending_id)
+
+            if not entry or entry.status != "pending":
+                await self.bot.answer_callback_query(cq_id, text="⏰ Ответ истёк или уже обработан.", show_alert=True)
+                return
+
+            await self.bot.answer_callback_query(cq_id, text="Генерирую голосовое...")
+            await self.pending.update_status(pending_id, "approved")
+
+            try:
+                # Set typing indicator for generating voice
+                await self.bot.send_chat_action(
+                    entry.sender_chat_id, "record_voice", business_connection_id=entry.business_connection_id
+                )
+                
+                voice_bytes = await self.audio_service.generate_voice(entry.proposed_reply)
+                
+                await self.bot.send_voice(
+                    chat_id=entry.sender_chat_id,
+                    voice_bytes=voice_bytes,
+                    business_connection_id=entry.business_connection_id,
+                )
+
+                # Edit the card to show it was sent as voice
+                sent_msg = (
+                    f"✅ <b>{escape(entry.sender_name)}</b>\n"
+                    f"<i>\"{escape(entry.incoming_text)}\"</i>\n\n"
+                    f"Отправлено (Голосом):\n"
+                    f"{escape(entry.proposed_reply)}"
+                )
+                await self.bot.edit_message_text(
+                    chat_id=entry.owner_chat_id,
+                    message_id=entry.owner_message_id,
+                    text=sent_msg,
+                )
+
+                await self.repo.log_business_action(
+                    connection_id=entry.business_connection_id,
+                    action="approved_voice",
+                    sender_name=entry.sender_name,
+                    message_text=entry.proposed_reply,
+                )
+
+                # Save the AI's reply to history
+                await self.repo.save_message(
+                    chat_id=entry.sender_chat_id,
+                    connection_id=entry.business_connection_id,
+                    role="assistant",
+                    content=f"[🎤 Голосовой ответ] {entry.proposed_reply}",
+                    sender_name="assistant",
+                    source="live",
+                )
+                
+                await self.pending.remove(pending_id)
+                logger.info("Reply approved as voice and sent: id=%s", pending_id)
+
+            except Exception as e:
+                logger.error("Failed to send approved voice reply: %s", e)
+                await self.bot.send_message(self.owner_chat_id, f"❌ Ошибка отправки голосового ответа: {e}")
+                await self.pending.update_status(pending_id, "pending") # revert
 
         # ── REJECT ──────────────────────────────────────────────
         elif data.startswith(CB_REJECT):

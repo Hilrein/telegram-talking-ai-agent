@@ -31,6 +31,10 @@ class Config:
     # Mini App settings
     miniapp_port: int = 8000
     ngrok_authtoken: str = ""
+    # Audio settings
+    cartesia_api_key: Optional[str] = None
+    cartesia_voice_id: Optional[str] = None
+
     
     @property
     def db_path(self) -> Path:
@@ -69,6 +73,8 @@ class Config:
                 os.getenv("NVIDIA_MODEL", "meta/llama-3.3-70b-instruct")
             ),
             business_style_prompt=os.getenv("BUSINESS_STYLE_PROMPT", ""),
+            cartesia_api_key=os.getenv("CARTESIA_API_KEY"),
+            cartesia_voice_id=os.getenv("CARTESIA_VOICE_ID"),
         )
 
 
@@ -114,6 +120,8 @@ def load_config() -> Config:
         owner_name=os.getenv("OWNER_NAME", ""),
         miniapp_port=int(os.getenv("MINIAPP_PORT", "8000")),
         ngrok_authtoken=os.getenv("NGROK_AUTHTOKEN", ""),
+        cartesia_api_key=os.getenv("CARTESIA_API_KEY"),
+        cartesia_voice_id=os.getenv("CARTESIA_VOICE_ID"),
     )
 
 
