@@ -6,7 +6,7 @@ stream = True
 
 
 headers = {
-  "Authorization": "Bearer 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",
+  "Authorization": "...",
   "Accept": "text/event-stream" if stream else "application/json"
 }
 
