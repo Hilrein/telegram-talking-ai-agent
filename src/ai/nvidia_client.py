@@ -1,10 +1,3 @@
-"""
-Unified NVIDIA NIM LLM client.
-
-Uses the OpenAI-compatible API provided by NVIDIA NIM.
-All LLM calls in the project go through this single module.
-"""
-
 import logging
 from typing import Optional
 
@@ -19,8 +12,6 @@ NVIDIA_DEFAULT_MODEL = "nvidia/llama-3.1-nemotron-ultra-253b-v1"
 
 
 class NvidiaClient:
-    """Async LLM client for NVIDIA NIM (OpenAI-compatible)."""
-
     def __init__(
         self,
         api_key: str,
@@ -45,7 +36,6 @@ class NvidiaClient:
         temperature: float = 0.7,
         max_tokens: int = 1024,
     ) -> str:
-        """Send a chat completion request and return the response text."""
         try:
             response = await self._client.chat.completions.create(
                 model=self.model,

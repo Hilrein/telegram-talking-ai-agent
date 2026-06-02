@@ -35,5 +35,11 @@ CREATE INDEX IF NOT EXISTS idx_business_logs_connection ON business_logs(connect
 CREATE INDEX IF NOT EXISTS idx_business_logs_action ON business_logs(action);
 CREATE INDEX IF NOT EXISTS idx_chat_messages_chat ON chat_messages(chat_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_chat_messages_connection ON chat_messages(connection_id);
+
+CREATE TABLE IF NOT EXISTS settings (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 """
 

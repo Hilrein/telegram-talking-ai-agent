@@ -31,6 +31,7 @@ class Config:
     # Mini App settings
     miniapp_port: int = 8000
     ngrok_authtoken: str = ""
+    business_api_token: str = ""
     # Audio settings
     cartesia_api_key: Optional[str] = None
     cartesia_voice_id: Optional[str] = None
@@ -120,6 +121,7 @@ def load_config() -> Config:
         owner_name=os.getenv("OWNER_NAME", ""),
         miniapp_port=int(os.getenv("MINIAPP_PORT", "8000")),
         ngrok_authtoken=os.getenv("NGROK_AUTHTOKEN", ""),
+        business_api_token=os.getenv("BUSINESS_API_TOKEN", ""),
         cartesia_api_key=os.getenv("CARTESIA_API_KEY"),
         cartesia_voice_id=os.getenv("CARTESIA_VOICE_ID"),
     )

@@ -54,6 +54,18 @@ class Repository:
         )
         await self._conn.commit()
 
+    async def set_connection_enabled(self, connection_id: str, is_enabled: bool) -> bool:
+        cursor = await self._conn.execute(
+            """
+            UPDATE business_connections
+            SET is_enabled = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE connection_id = ?
+            """,
+            (is_enabled, connection_id),
+        )
+        await self._conn.commit()
+        return cursor.rowcount > 0
+
     async def get_business_connection(self, connection_id: str) -> Optional[dict]:
         cursor = await self._conn.execute(
             "SELECT connection_id, user_id, user_name, is_enabled, can_reply FROM business_connections WHERE connection_id = ?",
@@ -116,7 +128,6 @@ class Repository:
         sender_name: str = "",
         source: str = "live",
     ) -> None:
-        """Persist a single message to the per-user conversation history."""
         await self._conn.execute(
             """
             INSERT INTO chat_messages (chat_id, connection_id, sender_name, role, content, source)
@@ -132,11 +143,6 @@ class Repository:
         limit: int = 30,
         months: int = 3,
     ) -> list[dict]:
-        """Return the N most recent messages for a given chat within the last X months.
-
-        Messages are returned in chronological order (oldest first) so they form
-        a natural conversation thread when passed to an LLM.
-        """
         since = datetime.utcnow() - timedelta(days=months * 30)
         cursor = await self._conn.execute(
             """
@@ -155,11 +161,6 @@ class Repository:
         return [{"role": row["role"], "content": row["content"]} for row in rows]
 
     async def get_all_contacts(self, connection_id: str = "") -> list[dict]:
-        """Return a list of unique contacts for the Mini App dashboard.
-
-        If *connection_id* is provided, results are filtered to that connection.
-        If omitted, all contacts across all connections are returned.
-        """
         if connection_id:
             cursor = await self._conn.execute(
                 """
@@ -202,12 +203,34 @@ class Repository:
             for row in rows
         ]
 
+    # ── Settings (key-value runtime config) ──────────────────────
+
+    async def get_setting(self, key: str) -> Optional[str]:
+        cursor = await self._conn.execute(
+            "SELECT value FROM settings WHERE key = ?",
+            (key,),
+        )
+        row = await cursor.fetchone()
+        return row["value"] if row else None
+
+    async def set_setting(self, key: str, value: str) -> None:
+        await self._conn.execute(
+            """
+            INSERT INTO settings (key, value, updated_at)
+            VALUES (?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(key) DO UPDATE SET
+                value = excluded.value,
+                updated_at = CURRENT_TIMESTAMP
+            """,
+            (key, value),
+        )
+        await self._conn.commit()
+
     async def get_chat_history(
         self,
         chat_id: int,
         limit: int = 100,
     ) -> list[dict]:
-        """Return the recent message history for a specific chat."""
         cursor = await self._conn.execute(
             """
             SELECT role, content, sender_name, created_at, source
@@ -231,7 +254,6 @@ class Repository:
         ]
 
     async def has_imported_history(self, chat_id: int) -> bool:
-        """Return True if this chat_id has any messages from a JSON import."""
         cursor = await self._conn.execute(
             "SELECT 1 FROM chat_messages WHERE chat_id = ? AND source = 'import' LIMIT 1",
             (chat_id,),
@@ -245,11 +267,6 @@ class Repository:
         connection_id: str,
         messages: list[dict],
     ) -> int:
-        """Bulk-insert pre-parsed messages from a Telegram JSON export.
-
-        Each message dict must have: role, content, sender_name, created_at (ISO str).
-        Returns the number of rows inserted.
-        """
         rows = [
             (
                 chat_id,

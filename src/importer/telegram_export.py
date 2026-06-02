@@ -1,21 +1,3 @@
-"""
-Telegram JSON export importer.
-
-Parses the standard result.json produced by Telegram Desktop's
-"Export chat history" feature and bulk-inserts messages into the
-chat_messages table with source='import'.
-
-Usage:
-    from src.importer.telegram_export import TelegramExportImporter
-    importer = TelegramExportImporter(repo, owner_name="Иван Иванов")
-    count = await importer.import_file(
-        path=Path("result.json"),
-        chat_id=123456789,
-        connection_id="abc123",
-        months=3,
-    )
-"""
-
 import json
 import logging
 from datetime import datetime, timedelta
@@ -28,11 +10,8 @@ logger = logging.getLogger(__name__)
 
 
 class TelegramExportImporter:
-    """Parse a Telegram Desktop JSON export and store messages per-user."""
-
     def __init__(self, repo: Repository, owner_name: str):
         self.repo = repo
-        # Normalise once for fast comparison
         self._owner_name = owner_name.strip().lower()
 
     async def import_file(
@@ -42,11 +21,6 @@ class TelegramExportImporter:
         connection_id: str,
         months: int = 3,
     ) -> int:
-        """Parse *path* and import messages into the DB.
-
-        Returns the number of messages actually inserted.
-        Skips non-text messages and messages older than *months*.
-        """
         path = Path(path)
         if not path.exists():
             raise FileNotFoundError(f"Export file not found: {path}")
@@ -60,7 +34,6 @@ class TelegramExportImporter:
         parsed: list[dict] = []
 
         for msg in raw_messages:
-            # Only plain text messages
             if msg.get("type") != "message":
                 continue
 
@@ -104,11 +77,6 @@ class TelegramExportImporter:
 
     @staticmethod
     def _extract_text(msg: dict) -> str:
-        """Extract plain text from a message object.
-
-        Telegram exports can have `text` as either a plain string or a list of
-        mixed text/entity dicts.  We concatenate only the string parts.
-        """
         text = msg.get("text", "")
         if isinstance(text, str):
             return text.strip()
@@ -124,7 +92,6 @@ class TelegramExportImporter:
 
     @staticmethod
     def _parse_date(date_str: str) -> datetime | None:
-        """Parse the ISO-8601 date string used by Telegram exports."""
         if not date_str:
             return None
         try:

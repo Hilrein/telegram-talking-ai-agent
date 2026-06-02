@@ -16,7 +16,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class PendingResponse:
-    """A single AI-generated reply awaiting owner approval."""
     pending_id: str
     business_connection_id: str
     sender_chat_id: int
@@ -25,14 +24,12 @@ class PendingResponse:
     incoming_text: str
     proposed_reply: str
     owner_chat_id: int
-    owner_message_id: int  # message in owner chat with buttons
+    owner_message_id: int
     created_at: float = field(default_factory=time.time)
     status: str = "pending"  # pending | approved | rejected | expired | rewriting
 
 
 class PendingStore:
-    """Thread-safe in-memory store for pending approvals with expiry."""
-
     def __init__(self, timeout_minutes: int = 10):
         self._store: dict[str, PendingResponse] = {}
         self._lock = asyncio.Lock()
@@ -73,7 +70,6 @@ class PendingStore:
             return self._store.pop(pending_id, None)
 
     async def expire_old(self) -> list[PendingResponse]:
-        """Expire entries older than timeout. Returns list of expired entries."""
         now = time.time()
         expired: list[PendingResponse] = []
         async with self._lock:
@@ -85,7 +81,6 @@ class PendingStore:
         return expired
 
     async def get_by_owner_message(self, chat_id: int, message_id: int) -> Optional[PendingResponse]:
-        """Find a pending entry by the owner notification message."""
         async with self._lock:
             for entry in self._store.values():
                 if entry.owner_chat_id == chat_id and entry.owner_message_id == message_id:

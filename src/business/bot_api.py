@@ -1,12 +1,3 @@
-"""
-Low-level Telegram Bot API client.
-
-Wraps the HTTP-based Bot API for business-specific operations:
-- getUpdates (long polling)
-- sendMessage (with business_connection_id support)
-- answerCallbackQuery
-"""
-
 import logging
 from typing import Optional
 
@@ -52,7 +43,6 @@ class BotApiClient:
         allowed_updates: Optional[list[str]] = None,
         poll_timeout: int = 30,
     ) -> list[dict]:
-        """Long-poll for new updates. Returns a list of Update dicts."""
         try:
             result = await self._request(
                 "getUpdates",

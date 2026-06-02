@@ -1,11 +1,3 @@
-"""
-Business bot runner.
-
-Starts the Bot API long-polling loop and dispatches updates
-to the BusinessHandler. Also runs a periodic expiry task.
-Launches the Mini App (FastAPI + ngrok) alongside the bot.
-"""
-
 import asyncio
 import logging
 import sys
@@ -39,7 +31,6 @@ ALLOWED_UPDATES = [
 
 
 async def run_business_bot() -> int:
-    """Main entry point for the business bot mode."""
     try:
         config = load_config()
     except ValueError as e:
@@ -80,7 +71,6 @@ async def run_business_bot() -> int:
         miniapp_public_url = f"http://localhost:{config.miniapp_port}"
 
     try:
-        # Verify bot token
         me = await bot.get_me()
         bot_name = me.get("first_name", "Bot")
         bot_username = me.get("username", "")
@@ -128,15 +118,14 @@ async def run_business_bot() -> int:
                 context_limit=config.context_limit,
                 context_months=config.context_months,
             )
-
-            # Configure FastAPI with shared repo
-            # connection_id is not known at startup; handler will set it on first connect
+            
             configure_api(
                 repo=repo,
                 owner_name=config.owner_name,
+                api_token=config.business_api_token,
+                handler=handler,
             )
 
-            # Notify owner that bot is online
             await bot.send_message(
                 config.business_owner_chat_id,
                 f"🟢 <b>Business бот запущен</b>\n\n"
@@ -147,7 +136,6 @@ async def run_business_bot() -> int:
             console.print("[bold green]🟢 Business bot is running[/bold green]")
             console.print("[dim]Press Ctrl+C to stop[/dim]\n")
 
-            # Run polling, expiry, and API server concurrently
             await asyncio.gather(
                 _poll_loop(bot, handler),
                 _expiry_loop(handler),
@@ -180,7 +168,6 @@ async def run_business_bot() -> int:
 
 
 async def _poll_loop(bot: BotApiClient, handler: BusinessHandler) -> None:
-    """Long-polling loop for Bot API updates."""
     logger.info("Starting Bot API polling loop")
 
     while True:
@@ -204,7 +191,6 @@ async def _poll_loop(bot: BotApiClient, handler: BusinessHandler) -> None:
 
 
 async def _expiry_loop(handler: BusinessHandler, interval: int = 30) -> None:
-    """Periodically expire old pending responses."""
     while True:
         try:
             await asyncio.sleep(interval)
@@ -216,7 +202,6 @@ async def _expiry_loop(handler: BusinessHandler, interval: int = 30) -> None:
 
 
 async def _serve_miniapp(port: int) -> None:
-    """Run the FastAPI Mini App server as an asyncio task."""
     server_config = uvicorn.Config(
         app=fastapi_app,
         host="0.0.0.0",
@@ -231,7 +216,6 @@ async def _serve_miniapp(port: int) -> None:
 
 
 def main_business():
-    """CLI entry point for `tg-agent` command."""
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",

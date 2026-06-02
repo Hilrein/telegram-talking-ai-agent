@@ -66,6 +66,9 @@ All data processing and storage occur locally using SQLite, ensuring privacy. Th
 
    # Optional: custom style prompt
    BUSINESS_STYLE_PROMPT=Отвечай кратко и дружелюбно.
+
+   # API token for the Mini App dashboard (any random string)
+   BUSINESS_API_TOKEN=change-me-to-a-long-random-string
    ```
 
 ## Usage

@@ -1,16 +1,8 @@
-"""
-FastAPI server for the Telegram Mini App.
-
-Provides REST endpoints for the contacts dashboard and JSON import.
-Serves the miniapp/ static files at the root URL.
-Runs alongside the bot inside the same asyncio event loop.
-"""
-
 import logging
 from pathlib import Path
 from typing import Optional
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -23,24 +15,41 @@ MINIAPP_DIR = Path(__file__).parent.parent / "miniapp"
 
 app = FastAPI(title="TG Agent Mini App API", docs_url=None, redoc_url=None)
 
-# Will be injected at startup by runner.py
 _repo: Optional[Repository] = None
 _owner_name: str = ""
 _active_connection_id: str = ""
+_api_token: str = ""
+_handler = None
 
 
-def configure(repo: Repository, owner_name: str, connection_id: str = "") -> None:
-    """Inject runtime dependencies (called from runner.py before serving)."""
-    global _repo, _owner_name, _active_connection_id
+def configure(
+    repo: Repository,
+    owner_name: str,
+    connection_id: str = "",
+    api_token: str = "",
+    handler=None,
+) -> None:
+    global _repo, _owner_name, _active_connection_id, _api_token, _handler
     _repo = repo
     _owner_name = owner_name
     _active_connection_id = connection_id
+    _api_token = api_token
+    _handler = handler
+
+
+def verify_token(authorization: Optional[str] = Header(None)) -> None:
+    if not _api_token:
+        raise HTTPException(status_code=503, detail="API token not configured")
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+    token = authorization[len("Bearer "):].strip()
+    if token != _api_token:
+        raise HTTPException(status_code=403, detail="Invalid token")
 
 
 # ── Static files ──────────────────────────────────────────────────────────────
 
 if MINIAPP_DIR.exists():
-    # Serve CSS/JS from /static/
     app.mount("/static", StaticFiles(directory=MINIAPP_DIR), name="static")
 
 
@@ -56,11 +65,9 @@ async def serve_index():
 
 @app.get("/api/contacts")
 async def get_contacts(connection_id: Optional[str] = None):
-    """Return all unique contacts for the Mini App dashboard."""
     if _repo is None:
         raise HTTPException(status_code=503, detail="Repository not ready")
 
-    # Pass connection_id if explicitly given; otherwise get_all_contacts returns ALL contacts
     conn_id = connection_id or _active_connection_id
     contacts = await _repo.get_all_contacts(conn_id)
     return JSONResponse(content={"contacts": contacts, "connection_id": conn_id})
@@ -70,7 +77,6 @@ async def get_contacts(connection_id: Optional[str] = None):
 
 @app.get("/api/history/{chat_id}")
 async def get_history(chat_id: int):
-    """Return the recent message history for a specific chat."""
     if _repo is None:
         raise HTTPException(status_code=503, detail="Repository not ready")
 
@@ -86,7 +92,6 @@ async def import_chat(
     connection_id: Optional[str] = Form(None),
     file: UploadFile = File(...),
 ):
-    """Accept a Telegram JSON export and import it for a specific chat_id."""
     if _repo is None:
         raise HTTPException(status_code=503, detail="Repository not ready")
 
@@ -95,7 +100,6 @@ async def import_chat(
     if not file.filename or not file.filename.endswith(".json"):
         raise HTTPException(status_code=400, detail="Only .json files are accepted")
 
-    # Save to a temporary location so the importer can open it
     import tempfile, os
 
     suffix = ".json"
@@ -136,3 +140,79 @@ async def import_chat(
 @app.get("/api/health")
 async def health():
     return {"status": "ok"}
+
+
+# ── Auth ──────────────────────────────────────────────────────────────────────
+
+@app.post("/api/auth/login")
+async def login(payload: dict):
+    if not _api_token:
+        raise HTTPException(status_code=503, detail="API token not configured")
+    submitted = (payload or {}).get("token", "").strip()
+    if not submitted or submitted != _api_token:
+        raise HTTPException(status_code=403, detail="Invalid token")
+    return {"access_token": _api_token, "token_type": "bearer"}
+
+
+# ── Business connection management ───────────────────────────────────────────
+
+@app.get("/api/connection/status", dependencies=[Depends(verify_token)])
+async def connection_status():
+    if _repo is None:
+        raise HTTPException(status_code=503, detail="Repository not ready")
+    if not _active_connection_id:
+        return {"connected": False, "connection_id": "", "is_enabled": False}
+    conn = await _repo.get_business_connection(_active_connection_id)
+    if not conn:
+        return {"connected": False, "connection_id": _active_connection_id, "is_enabled": False}
+    return {
+        "connected": True,
+        "connection_id": conn["connection_id"],
+        "user_id": conn["user_id"],
+        "user_name": conn["user_name"],
+        "is_enabled": conn["is_enabled"],
+        "can_reply": conn["can_reply"],
+    }
+
+
+@app.post("/api/connection/disable", dependencies=[Depends(verify_token)])
+async def connection_disable():
+    if _repo is None or not _active_connection_id:
+        raise HTTPException(status_code=503, detail="No active connection")
+    updated = await _repo.set_connection_enabled(_active_connection_id, False)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Connection not found")
+    return {"status": "disabled", "connection_id": _active_connection_id}
+
+
+@app.post("/api/connection/enable", dependencies=[Depends(verify_token)])
+async def connection_enable():
+    if _repo is None or not _active_connection_id:
+        raise HTTPException(status_code=503, detail="No active connection")
+    updated = await _repo.set_connection_enabled(_active_connection_id, True)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Connection not found")
+    return {"status": "enabled", "connection_id": _active_connection_id}
+
+
+# ── Settings (runtime AI style prompt) ───────────────────────────────────────
+
+@app.get("/api/settings/style", dependencies=[Depends(verify_token)])
+async def settings_get_style():
+    if _repo is None:
+        raise HTTPException(status_code=503, detail="Repository not ready")
+    value = await _repo.get_setting("style_prompt")
+    return {"value": value or "", "source": "db" if value else "default"}
+
+
+@app.post("/api/settings/style", dependencies=[Depends(verify_token)])
+async def settings_set_style(payload: dict):
+    if _repo is None:
+        raise HTTPException(status_code=503, detail="Repository not ready")
+    value = (payload or {}).get("value", "")
+    if not isinstance(value, str):
+        raise HTTPException(status_code=400, detail="`value` must be a string")
+    await _repo.set_setting("style_prompt", value)
+    if _handler is not None:
+        _handler.set_style_prompt(value)
+    return {"status": "ok", "length": len(value)}

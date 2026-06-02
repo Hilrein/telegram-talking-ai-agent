@@ -142,7 +142,6 @@
       color: var(--text-muted);
     }
 
-    /* Minimal Refresh Button */
     .btn-refresh {
       background: transparent;
       border: none;
@@ -231,7 +230,6 @@
       justify-content: flex-end;
     }
 
-    /* Clean Card Action Buttons */
     .btn-action {
       height: 32px;
       border-radius: 16px;
@@ -501,9 +499,150 @@
       from { opacity: 0; transform: translateY(8px); }
       to { opacity: 1; transform: translateY(0); }
     }
+
+    /* ── Settings panel ──────────────────────────────────────── */
+    .settings-card {
+      background-color: var(--card-bg);
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .settings-card label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .settings-card textarea {
+      width: 100%;
+      min-height: 120px;
+      padding: 12px;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      border-radius: 10px;
+      font-family: var(--font);
+      font-size: 14px;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.15s ease;
+    }
+    .settings-card textarea:focus { border-color: var(--accent); }
+    .settings-card .btn-submit { align-self: flex-start; }
+    .settings-status { font-size: 12px; color: var(--text-muted); }
+
+    /* Connection status badge */
+    .conn-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.04);
+    }
+    .conn-badge .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #34c759;
+    }
+    .conn-badge.disabled .dot { background: #ff3b30; }
+    .conn-badge.unknown .dot { background: #8e8e93; }
+
+    .conn-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn-toggle {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      background-color: var(--btn-secondary-bg);
+      color: var(--text-primary);
+      transition: background-color 0.15s ease;
+    }
+    .btn-toggle:hover { background-color: var(--btn-secondary-hover); }
+    .btn-toggle.danger { background: #ff3b30; color: #fff; }
+    .btn-toggle.success { background: #34c759; color: #fff; }
+
+    /* ── Login screen ─────────────────────────────────────────── */
+    .login-screen {
+      position: fixed; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--bg);
+      padding: 20px;
+      z-index: 1000;
+    }
+    .login-card {
+      background: var(--card-bg);
+      border-radius: 18px;
+      padding: 32px 24px;
+      width: 100%;
+      max-width: 360px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .login-card h1 {
+      font-size: 22px;
+      font-weight: 700;
+      margin: 0;
+      text-align: center;
+    }
+    .login-sub {
+      font-size: 13px;
+      color: var(--text-secondary);
+      text-align: center;
+      margin: 0 0 8px 0;
+    }
+    .login-card input[type="password"] {
+      padding: 12px 14px;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      border-radius: 10px;
+      font-size: 14px;
+      font-family: var(--font);
+      outline: none;
+      transition: border-color 0.15s ease;
+    }
+    .login-card input[type="password"]:focus { border-color: var(--accent); }
+    .login-card .btn-submit { margin-top: 4px; }
+    .login-error {
+      font-size: 13px;
+      color: #ff3b30;
+      min-height: 18px;
+      text-align: center;
+    }
+    .login-hint {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-align: center;
+      margin: 4px 0 0 0;
+      line-height: 1.5;
+    }
+    .login-hint code {
+      background: rgba(0, 0, 0, 0.05);
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-size: 11px;
+    }
   </style>
 </head>
 <body>
+  <!-- Login screen -->
+  <div id="login-screen" class="login-screen hidden">
+    <div class="login-card">
+      <h1>AI Agent</h1>
+      <p class="login-sub">Введите API-токен для доступа</p>
+      <input id="login-token" type="password" placeholder="BUSINESS_API_TOKEN" autocomplete="off" />
+      <button id="btn-login" class="btn-submit">Войти</button>
+      <div id="login-error" class="login-error"></div>
+      <p class="login-hint">Токен задан в файле <code>.env</code> (переменная <code>BUSINESS_API_TOKEN</code>)</p>
+    </div>
+  </div>
+
   <div id="app">
     <!-- Header -->
     <header class="header">
@@ -515,6 +654,7 @@
     <nav class="tabs">
       <button class="tab active" data-tab="contacts" id="tab-contacts">Контакты</button>
       <button class="tab" data-tab="import" id="tab-import">Импорт</button>
+      <button class="tab" data-tab="settings" id="tab-settings">Настройки</button>
     </nav>
 
     <!-- Contacts Tab -->
@@ -559,6 +699,34 @@
       </div>
     </section>
 
+    <!-- Settings Tab -->
+    <section id="panel-settings" class="panel">
+      <div class="panel-header">
+        <span class="section-title">Бизнес-подключение</span>
+        <span id="conn-badge" class="conn-badge unknown"><span class="dot"></span><span id="conn-badge-text">проверка…</span></span>
+      </div>
+      <div class="settings-card">
+        <span class="settings-card-label">Статус: <span id="conn-user-name">—</span></span>
+        <div class="conn-actions">
+          <button class="btn-toggle success" id="btn-conn-enable">Включить</button>
+          <button class="btn-toggle danger" id="btn-conn-disable">Отключить</button>
+        </div>
+      </div>
+
+      <div class="panel-header" style="margin-top: 8px;">
+        <span class="section-title">Стиль ответов AI</span>
+      </div>
+      <div class="settings-card">
+        <label for="input-style-prompt">Системный промпт стиля</label>
+        <textarea id="input-style-prompt" placeholder="Например: Отвечай кратко и дружелюбно, используй разговорный стиль..."></textarea>
+        <div class="conn-actions">
+          <button class="btn-submit" id="btn-save-style">Сохранить</button>
+          <button class="btn-toggle" id="btn-reset-style">Сбросить</button>
+        </div>
+        <div id="settings-status" class="settings-status"></div>
+      </div>
+    </section>
+
     <!-- History Modal -->
     <div id="history-modal" class="modal hidden">
       <div class="modal-content">
@@ -588,7 +756,6 @@
       });
     });
 
-    /* ── Light Soft Gradient Generation for Avatars ───────────── */
     const gradients = [
       'linear-gradient(135deg, #FF9A9E 0%, #FECFEF 100%)',
       'linear-gradient(135deg, #A1C4FD 0%, #C2E9FB 100%)',
@@ -674,14 +841,12 @@
             <button class="btn-action btn-action-secondary contact-import-btn" data-chat-id="${c.chat_id}">+ импорт</button>
           </div>`;
 
-        // Quick-import: pre-fill chat_id and switch to import tab
         card.querySelector('.contact-import-btn').addEventListener('click', e => {
           e.stopPropagation();
           document.getElementById('input-chat-id').value = c.chat_id;
           document.querySelector('[data-tab="import"]').click();
         });
 
-        // Open History Modal
         card.querySelector('.btn-history').addEventListener('click', e => {
           e.stopPropagation();
           openHistory(c.chat_id);
@@ -820,7 +985,6 @@
         list.appendChild(bubble);
       });
       
-      // Scroll to bottom
       list.scrollTop = list.scrollHeight;
     }
 
@@ -842,8 +1006,108 @@
       return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     }
 
+    /* ── Settings: connection status & style prompt ──────────── */
+    const connBadge = document.getElementById('conn-badge');
+    const connBadgeText = document.getElementById('conn-badge-text');
+    const connUserName = document.getElementById('conn-user-name');
+    const styleInput = document.getElementById('input-style-prompt');
+    const settingsStatus = document.getElementById('settings-status');
+
+    function setBadge(connected, isEnabled) {
+      connBadge.classList.remove('disabled', 'unknown');
+      if (!connected) {
+        connBadge.classList.add('unknown');
+        connBadgeText.textContent = 'не подключено';
+        return;
+      }
+      if (!isEnabled) {
+        connBadge.classList.add('disabled');
+        connBadgeText.textContent = 'отключено';
+      } else {
+        connBadgeText.textContent = 'активно';
+      }
+    }
+
+    async function loadConnectionStatus() {
+      try {
+        const res = await api.authFetch('/api/connection/status');
+        if (res.status === 401 || res.status === 403) {
+          connBadge.classList.add('unknown');
+          connBadgeText.textContent = 'нет доступа';
+          return;
+        }
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        connUserName.textContent = data.user_name || '—';
+        setBadge(data.connected, data.is_enabled);
+      } catch (e) {
+        connBadge.classList.add('unknown');
+        connBadgeText.textContent = 'ошибка';
+      }
+    }
+
+    async function loadStylePrompt() {
+      try {
+        const res = await api.authFetch('/api/settings/style');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        styleInput.value = data.value || '';
+        settingsStatus.textContent = data.source === 'db'
+          ? 'Загружено из базы данных'
+          : 'Используется значение по умолчанию (.env)';
+      } catch (e) {
+        settingsStatus.textContent = `Ошибка загрузки: ${e.message}`;
+      }
+    }
+
+    document.getElementById('btn-save-style').addEventListener('click', async () => {
+      const value = styleInput.value;
+      try {
+        const res = await api.authFetch('/api/settings/style', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ value }),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        settingsStatus.textContent = `✅ Сохранено (${data.length} символов). Применяется к новым ответам.`;
+      } catch (e) {
+        settingsStatus.textContent = `❌ Ошибка: ${e.message}`;
+      }
+    });
+
+    document.getElementById('btn-reset-style').addEventListener('click', () => {
+      styleInput.value = '';
+      settingsStatus.textContent = 'Поле очищено. Нажмите «Сохранить» для применения.';
+    });
+
+    document.getElementById('btn-conn-enable').addEventListener('click', async () => {
+      try {
+        const res = await api.authFetch('/api/connection/enable', { method: 'POST' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        await loadConnectionStatus();
+      } catch (e) { alert(`Ошибка: ${e.message}`); }
+    });
+
+    document.getElementById('btn-conn-disable').addEventListener('click', async () => {
+      if (!confirm('Отключить бота от бизнес-аккаунта? Он перестанет отвечать на сообщения.')) return;
+      try {
+        const res = await api.authFetch('/api/connection/disable', { method: 'POST' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        await loadConnectionStatus();
+      } catch (e) { alert(`Ошибка: ${e.message}`); }
+    });
+
+    document.querySelector('[data-tab="settings"]').addEventListener('click', () => {
+      loadConnectionStatus();
+      loadStylePrompt();
+    });
+
     /* ── Init ─────────────────────────────────────────────────── */
-    loadContacts();
+    if (api.isAuthed()) {
+      loadContacts();
+    }
   </script>
+  <script src="app.js"></script>
 </body>
 </html>

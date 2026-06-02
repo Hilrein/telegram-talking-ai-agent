@@ -1,10 +1,3 @@
-"""
-Business update handler.
-
-Processes business_connection, business_message, and callback_query updates.
-Implements the monitoring + AI auto-responder with manual confirmation flow.
-"""
-
 import asyncio
 import json
 import logging
@@ -53,8 +46,6 @@ def _build_approval_keyboard(pending_id: str) -> dict:
 
 
 class BusinessHandler:
-    """Handles all business-related Telegram Bot API updates."""
-
     def __init__(
         self,
         bot: BotApiClient,
@@ -76,13 +67,25 @@ class BusinessHandler:
         self.style_prompt = style_prompt
         self.context_limit = context_limit
         self.context_months = context_months
-        # {owner_chat_user_id: pending_id} — tracks "awaiting rewrite" state
         self._rewrite_awaiting: dict[int, str] = {}
+
+    def set_style_prompt(self, new_prompt: str) -> None:
+        """Hot-reload the style prompt used for AI generation (called from Mini App API)."""
+        self.style_prompt = new_prompt or ""
+        logger.info("Style prompt updated (%d chars)", len(self.style_prompt))
+
+    def set_active_connection_id(self, conn_id: str) -> None:
+        """Sync the active business connection id to api_server (for /api/connection/*)."""
+        try:
+            from ..api_server import _active_connection_id as _glb  # type: ignore
+            import api_server as _api_mod
+            _api_mod._active_connection_id = conn_id
+        except Exception as e:
+            logger.warning("Failed to sync active_connection_id: %s", e)
 
     # ── Public dispatch ─────────────────────────────────────────
 
     async def handle_update(self, update: dict) -> None:
-        """Route an update to the appropriate handler."""
         if "business_connection" in update:
             await self._on_business_connection(update["business_connection"])
 
@@ -99,7 +102,6 @@ class BusinessHandler:
             await self._on_callback_query(update["callback_query"])
 
         elif "message" in update:
-            # Could be a text message from owner in the control chat (rewrite flow)
             await self._on_direct_message(update["message"])
 
     # ── business_connection ─────────────────────────────────────
@@ -134,6 +136,7 @@ class BusinessHandler:
         )
 
         await self.bot.send_message(self.owner_chat_id, notification)
+        self.set_active_connection_id(conn_id)
         logger.info(
             "Business connection: user=%s enabled=%s can_reply=%s",
             user_name, is_enabled, can_reply,
@@ -142,7 +145,6 @@ class BusinessHandler:
     # ── business_message ────────────────────────────────────────
 
     async def _on_business_message(self, message: dict) -> None:
-        # Skip messages from the bot itself
         from_user = message.get("from", {})
         if from_user.get("is_bot", False):
             return
@@ -151,7 +153,6 @@ class BusinessHandler:
         if not business_connection_id:
             return
 
-        # Check if this connection is still active
         conn = await self.repo.get_business_connection(business_connection_id)
         if not conn or not conn.get("is_enabled"):
             logger.info("Ignoring message for disabled/unknown connection: %s", business_connection_id)
@@ -277,14 +278,13 @@ class BusinessHandler:
             f"💡 <b>Ответ:</b>\n"
         )
         
-        # Split text into 3 chunks for a ~2 sec animation (0.7s per chunk)
         chunk_len = max(1, len(ai_reply) // 3)
         chunks = [ai_reply[:chunk_len], ai_reply[:chunk_len*2], ai_reply]
         
         for i, chunk in enumerate(chunks):
             current_text = f"{base_approval_msg}{escape(chunk)}"
             if i < len(chunks) - 1:
-                current_text += " ▒"  # Typing cursor effect
+                current_text += " ▒"
             
             try:
                 await self.bot.edit_message_text(
@@ -355,7 +355,6 @@ class BusinessHandler:
                 await self.bot.answer_callback_query(cq_id, text="⏰ Ответ истёк или уже обработан.", show_alert=True)
                 return
 
-            # Send the reply via business connection
             try:
                 await self.bot.send_message(
                     chat_id=entry.sender_chat_id,
@@ -381,7 +380,6 @@ class BusinessHandler:
             await self.pending.update_status(pending_id, "approved")
             await self.bot.answer_callback_query(cq_id, text="✅ Ответ отправлен!")
 
-            # Edit the card into a compact "sent" confirmation
             await self.bot.edit_message_text(
                 chat_id=entry.owner_chat_id,
                 message_id=entry.owner_message_id,
@@ -416,7 +414,6 @@ class BusinessHandler:
             await self.pending.update_status(pending_id, "approved")
 
             try:
-                # Set typing indicator for generating voice
                 await self.bot.send_chat_action(
                     entry.sender_chat_id, "record_voice", business_connection_id=entry.business_connection_id
                 )
@@ -429,7 +426,6 @@ class BusinessHandler:
                     business_connection_id=entry.business_connection_id,
                 )
 
-                # Edit the card to show it was sent as voice
                 sent_msg = (
                     f"✅ <b>{escape(entry.sender_name)}</b>\n"
                     f"<i>\"{escape(entry.incoming_text)}\"</i>\n\n"
@@ -449,7 +445,6 @@ class BusinessHandler:
                     message_text=entry.proposed_reply,
                 )
 
-                # Save the AI's reply to history
                 await self.repo.save_message(
                     chat_id=entry.sender_chat_id,
                     connection_id=entry.business_connection_id,
@@ -478,8 +473,6 @@ class BusinessHandler:
 
             await self.pending.update_status(pending_id, "rejected")
             await self.bot.answer_callback_query(cq_id, text="❌ Ответ отклонён.")
-
-            # Edit card into compact "rejected" state
             await self.bot.edit_message_text(
                 chat_id=entry.owner_chat_id,
                 message_id=entry.owner_message_id,
@@ -513,11 +506,9 @@ class BusinessHandler:
             await self.pending.update_status(pending_id, "rewriting")
             await self.bot.answer_callback_query(cq_id, text="✏️ Напишите уточнение.")
 
-            # Track that this user is in "rewrite" mode
             owner_user_id = cq_from.get("id", 0)
             self._rewrite_awaiting[owner_user_id] = pending_id
 
-            # Edit the same card to show "waiting for instructions" state
             await self.bot.edit_message_text(
                 chat_id=entry.owner_chat_id,
                 message_id=entry.owner_message_id,
@@ -542,11 +533,9 @@ class BusinessHandler:
         user_id = from_user.get("id", 0)
         chat_id = message["chat"]["id"]
 
-        # Only process messages in the owner chat
         if chat_id != self.owner_chat_id:
             return
 
-        # Check if this user is awaiting a rewrite prompt
         pending_id = self._rewrite_awaiting.pop(user_id, None)
         if not pending_id:
             return
@@ -562,14 +551,11 @@ class BusinessHandler:
             self._rewrite_awaiting[user_id] = pending_id
             return
 
-        # Delete old card — we will replace it with a fresh one
         old_msg_id = entry.owner_message_id
         try:
             await self.bot.delete_message(chat_id=chat_id, message_id=old_msg_id)
         except Exception:
-            pass  # best-effort cleanup
-
-        # Send a "thinking" placeholder
+            pass
         base_thinking = (
             f"💬 <b>{escape(entry.sender_name)}</b>\n"
             f"<i>\"{escape(entry.incoming_text)}\"</i>\n\n"
@@ -644,7 +630,6 @@ class BusinessHandler:
             if i < len(chunks) - 1:
                 await asyncio.sleep(0.7)
 
-        # Edit the "thinking" placeholder into the new approval card
         keyboard = _build_approval_keyboard(pending_id)
         new_card_msg = f"{base_approval_msg}{escape(new_reply)}"
 
@@ -660,7 +645,6 @@ class BusinessHandler:
             result = await self.bot.send_message(chat_id, new_card_msg, reply_markup=keyboard)
             thinking_id = result.get("message_id", 0)
 
-        # Update the stored message_id for button tracking
         entry.owner_message_id = thinking_id
 
         logger.info("Rewrite generated: id=%s new_reply_preview=%s", pending_id, new_reply[:60])
@@ -706,8 +690,6 @@ class BusinessHandler:
                     limit=self.context_limit,
                     months=self.context_months,
                 )
-                # Remove the last message from history if it duplicates incoming_text
-                # (we already saved it above, so it will appear in history)
                 if history and history[-1]["role"] == "user" and history[-1]["content"] == incoming_text:
                     history = history[:-1]
             except Exception as e:
@@ -727,7 +709,6 @@ class BusinessHandler:
         try:
             response = await self.ai.chat(messages, temperature=0.7)
             response = response.strip()
-            # Strip surrounding quotes if present
             if response.startswith('"') and response.endswith('"'):
                 response = response[1:-1]
             if response.startswith("'") and response.endswith("'"):
@@ -740,7 +721,6 @@ class BusinessHandler:
     # ── Expiry handling ─────────────────────────────────────────
 
     async def handle_expired(self) -> None:
-        """Expire old pending entries and notify the owner."""
         expired = await self.pending.expire_old()
         for entry in expired:
             try:

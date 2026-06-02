@@ -16,7 +16,6 @@ class AudioService:
         self.cartesia_voice_id = cartesia_voice_id
 
     async def transcribe_voice(self, audio_bytes: bytes) -> str:
-        """Transcribe OGG voice message using Nvidia NIM Whisper API."""
         url = "https://ai.api.nvidia.com/v1/audio/transcriptions"
         headers = {
             "Authorization": f"Bearer {self.nvidia_api_key}"
@@ -36,7 +35,6 @@ class AudioService:
             return result.get("text", "")
 
     async def generate_voice(self, text: str) -> bytes:
-        """Generate voice from text using Cartesia API."""
         if not self.cartesia_api_key:
             raise ValueError("CARTESIA_API_KEY is not set")
 
