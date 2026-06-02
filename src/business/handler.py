@@ -70,12 +70,10 @@ class BusinessHandler:
         self._rewrite_awaiting: dict[int, str] = {}
 
     def set_style_prompt(self, new_prompt: str) -> None:
-        """Hot-reload the style prompt used for AI generation (called from Mini App API)."""
         self.style_prompt = new_prompt or ""
         logger.info("Style prompt updated (%d chars)", len(self.style_prompt))
 
     def set_active_connection_id(self, conn_id: str) -> None:
-        """Sync the active business connection id to api_server (for /api/connection/*)."""
         try:
             from ..api_server import _active_connection_id as _glb  # type: ignore
             import api_server as _api_mod
