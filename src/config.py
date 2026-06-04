@@ -35,6 +35,16 @@ class Config:
     # Audio settings
     cartesia_api_key: Optional[str] = None
     cartesia_voice_id: Optional[str] = None
+    # Agent autonomous subsystem settings
+    agent_data_dir: Optional[Path] = None
+    agent_database_url: Optional[str] = None
+    # External database (PostgreSQL) for backup tool
+    postgres_database_url: Optional[str] = None
+
+    def __post_init__(self) -> None:
+        """Ensure the agent data directory exists after construction."""
+        if self.agent_data_dir is not None:
+            self.agent_data_dir.mkdir(parents=True, exist_ok=True)
 
     
     @property
@@ -61,6 +71,9 @@ class Config:
         except ValueError:
             timeout = 10
 
+        agent_data_dir = Path(os.getenv("AGENT_DATA_DIR", "./agent-data"))
+        agent_database_url = f"sqlite:///{agent_data_dir / 'agent_memory.db'}"
+
         return cls(
             data_dir=data_dir,
             nvidia_api_key=os.getenv("NVIDIA_API_KEY"),
@@ -76,6 +89,9 @@ class Config:
             business_style_prompt=os.getenv("BUSINESS_STYLE_PROMPT", ""),
             cartesia_api_key=os.getenv("CARTESIA_API_KEY"),
             cartesia_voice_id=os.getenv("CARTESIA_VOICE_ID"),
+            agent_data_dir=agent_data_dir,
+            agent_database_url=agent_database_url,
+            postgres_database_url=os.getenv("POSTGRES_DATABASE_URL"),
         )
 
 
@@ -102,6 +118,9 @@ def load_config() -> Config:
         timeout = int(timeout_str)
     except ValueError:
         timeout = 10
+
+    agent_data_dir = Path(os.getenv("AGENT_DATA_DIR", current / "agent-data"))
+    agent_database_url = f"sqlite:///{agent_data_dir / 'agent_memory.db'}"
     
     return Config(
         data_dir=data_dir,
@@ -124,6 +143,9 @@ def load_config() -> Config:
         business_api_token=os.getenv("BUSINESS_API_TOKEN", ""),
         cartesia_api_key=os.getenv("CARTESIA_API_KEY"),
         cartesia_voice_id=os.getenv("CARTESIA_VOICE_ID"),
+        agent_data_dir=agent_data_dir,
+        agent_database_url=agent_database_url,
+        postgres_database_url=os.getenv("POSTGRES_DATABASE_URL"),
     )
 
 

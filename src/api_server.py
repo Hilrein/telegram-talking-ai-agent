@@ -1,12 +1,14 @@
 import logging
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from .database.repository import Repository
+from .database.agent_repository import AgentRepository
+from .ai.nvidia_client import NvidiaClient
 from .importer.telegram_export import TelegramExportImporter
 
 logger = logging.getLogger(__name__)
@@ -20,6 +22,8 @@ _owner_name: str = ""
 _active_connection_id: str = ""
 _api_token: str = ""
 _handler = None
+_ai_client: Optional[NvidiaClient] = None
+_agent_db_path: Optional[Path] = None
 
 
 def configure(
@@ -28,13 +32,18 @@ def configure(
     connection_id: str = "",
     api_token: str = "",
     handler=None,
+    ai_client: Optional[NvidiaClient] = None,
+    agent_db_path: Optional[Path] = None,
 ) -> None:
     global _repo, _owner_name, _active_connection_id, _api_token, _handler
+    global _ai_client, _agent_db_path
     _repo = repo
     _owner_name = owner_name
     _active_connection_id = connection_id
     _api_token = api_token
     _handler = handler
+    _ai_client = ai_client
+    _agent_db_path = agent_db_path
 
 
 def verify_token(authorization: Optional[str] = Header(None)) -> None:
@@ -68,7 +77,9 @@ async def get_contacts(connection_id: Optional[str] = None):
     if _repo is None:
         raise HTTPException(status_code=503, detail="Repository not ready")
 
-    conn_id = connection_id or _active_connection_id
+    conn_id = connection_id
+    if not conn_id:
+        conn_id = await _get_active_conn_id()
     contacts = await _repo.get_all_contacts(conn_id)
     return JSONResponse(content={"contacts": contacts, "connection_id": conn_id})
 
@@ -95,7 +106,11 @@ async def import_chat(
     if _repo is None:
         raise HTTPException(status_code=503, detail="Repository not ready")
 
-    conn_id = connection_id or _active_connection_id or "default"
+    conn_id = connection_id
+    if not conn_id:
+        conn_id = await _get_active_conn_id()
+    if not conn_id:
+        conn_id = "default"
 
     if not file.filename or not file.filename.endswith(".json"):
         raise HTTPException(status_code=400, detail="Only .json files are accepted")
@@ -135,6 +150,174 @@ async def import_chat(
     )
 
 
+# ── Agent: Tasks CRUD ─────────────────────────────────────────────────────────
+
+
+async def _get_agent_repo() -> AgentRepository:
+    if _agent_db_path is None:
+        raise HTTPException(status_code=503, detail="Agent subsystem not configured")
+    repo = AgentRepository(_agent_db_path)
+    await repo.connect()
+    return repo
+
+
+@app.get("/api/agent/tasks", dependencies=[Depends(verify_token)])
+async def get_agent_tasks():
+    repo = await _get_agent_repo()
+    try:
+        tasks = await repo.get_active_tasks()
+        return JSONResponse(content={"tasks": tasks})
+    finally:
+        await repo.close()
+
+
+@app.post("/api/agent/tasks", dependencies=[Depends(verify_token)])
+async def create_agent_task(payload: dict):
+    task_type = (payload or {}).get("task_type", "")
+    execution_time = (payload or {}).get("execution_time")
+    prompt = (payload or {}).get("prompt", "")
+
+    if task_type not in ("every_hour", "every_day", "every_week"):
+        raise HTTPException(status_code=400, detail="task_type must be every_hour, every_day, or every_week")
+    if not prompt:
+        raise HTTPException(status_code=400, detail="prompt is required")
+
+    repo = await _get_agent_repo()
+    try:
+        task_id = await repo.add_task(
+            task_type=task_type,
+            prompt=prompt,
+            execution_time=execution_time,
+        )
+        task = await repo.get_task_by_id(task_id)
+    finally:
+        await repo.close()
+
+    if task:
+        from .business.scheduler import add_scheduled_job
+        add_scheduled_job(task)
+
+    return JSONResponse(content={"task": task}, status_code=201)
+
+
+@app.delete("/api/agent/tasks/{task_id}", dependencies=[Depends(verify_token)])
+async def delete_agent_task(task_id: int):
+    repo = await _get_agent_repo()
+    try:
+        deleted = await repo.delete_task(task_id)
+    finally:
+        await repo.close()
+
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    from .business.scheduler import remove_scheduled_job
+    remove_scheduled_job(task_id)
+    return JSONResponse(content={"status": "deleted", "task_id": task_id})
+
+
+# ── Agent: Interactive chat & sessions ───────────────────────────────────────
+
+@app.get("/api/agent/chats", dependencies=[Depends(verify_token)])
+async def get_agent_chats():
+    repo = await _get_agent_repo()
+    try:
+        sessions = await repo.get_all_sessions()
+        return JSONResponse(content={"sessions": sessions})
+    finally:
+        await repo.close()
+
+@app.post("/api/agent/chats", dependencies=[Depends(verify_token)])
+async def create_agent_chat():
+    import uuid
+    session_id = uuid.uuid4().hex
+    # Default title
+    title = "Новый чат"
+    repo = await _get_agent_repo()
+    try:
+        await repo.create_session(session_id, title)
+        return JSONResponse(content={"session_id": session_id, "title": title}, status_code=201)
+    finally:
+        await repo.close()
+
+@app.delete("/api/agent/chats/{session_id}", dependencies=[Depends(verify_token)])
+async def delete_agent_chat(session_id: str):
+    repo = await _get_agent_repo()
+    try:
+        deleted = await repo.delete_session(session_id)
+        if not deleted:
+            raise HTTPException(status_code=404, detail="Session not found")
+        return JSONResponse(content={"status": "deleted", "session_id": session_id})
+    finally:
+        await repo.close()
+
+_AGENT_SYSTEM_PROMPT = (
+    "You are an autonomous AI agent running on the user's PC. "
+    "You have access to tools: file search, web search, Git management, "
+    "and PostgreSQL backup. When the user gives you a task, choose the "
+    "most appropriate tool, execute it, and report the result concisely. "
+    "If no tool is needed, just answer the question directly. "
+    "Reply in the same language the user uses."
+)
+
+
+@app.post("/api/agent/chat", dependencies=[Depends(verify_token)])
+async def agent_chat_endpoint(payload: dict):
+    message = (payload or {}).get("message", "").strip()
+    session_id = (payload or {}).get("session_id", "web_default")
+
+    if not message:
+        raise HTTPException(status_code=400, detail="message is required")
+    if _ai_client is None:
+        raise HTTPException(status_code=503, detail="AI client not configured")
+
+    repo = await _get_agent_repo()
+    try:
+        await repo.save_history_message(
+            session_id=session_id,
+            role="user",
+            content=message,
+        )
+
+        # Rename chat if it's the first user message
+        history = await repo.get_session_history(session_id, limit=30)
+        
+        # If there's only 1 message (the one we just inserted) or we haven't set a title yet
+        if len(history) == 1:
+            title_words = message.split()[:5]
+            title = " ".join(title_words)
+            if len(message.split()) > 5:
+                title += "..."
+            await repo.update_session_title(session_id, title)
+
+        messages: list[dict[str, str]] = [{"role": "system", "content": _AGENT_SYSTEM_PROMPT}]
+        for h in history:
+            if h["role"] in ("user", "assistant"):
+                messages.append({"role": h["role"], "content": h["content"]})
+
+        response_text = await _ai_client.agent_chat(
+            messages=messages,
+            session_id=session_id,
+            agent_repo=repo,
+        )
+    finally:
+        await repo.close()
+
+    return JSONResponse(content={"response": response_text, "session_id": session_id})
+
+
+# ── Agent: History ────────────────────────────────────────────────────────────
+
+@app.get("/api/agent/history", dependencies=[Depends(verify_token)])
+async def get_agent_history(session_id: str = "web_default", limit: int = 50):
+    repo = await _get_agent_repo()
+    try:
+        messages = await repo.get_session_history(session_id, limit=limit)
+    finally:
+        await repo.close()
+    return JSONResponse(content={"messages": messages, "session_id": session_id})
+
+
 # ── Health check ──────────────────────────────────────────────────────────────
 
 @app.get("/api/health")
@@ -156,15 +339,30 @@ async def login(payload: dict):
 
 # ── Business connection management ───────────────────────────────────────────
 
+async def _get_active_conn_id() -> str:
+    global _active_connection_id
+    if _active_connection_id:
+        return _active_connection_id
+    # Fallback: get the latest connection from DB
+    if _repo and hasattr(_repo, "db"):
+        # Just fetch the first connection we can find in the DB
+        async with _repo.db.execute("SELECT connection_id FROM business_connections ORDER BY updated_at DESC LIMIT 1") as cursor:
+            row = await cursor.fetchone()
+            if row:
+                _active_connection_id = row["connection_id"]
+                return _active_connection_id
+    return ""
+
 @app.get("/api/connection/status", dependencies=[Depends(verify_token)])
 async def connection_status():
     if _repo is None:
         raise HTTPException(status_code=503, detail="Repository not ready")
-    if not _active_connection_id:
+    conn_id = await _get_active_conn_id()
+    if not conn_id:
         return {"connected": False, "connection_id": "", "is_enabled": False}
-    conn = await _repo.get_business_connection(_active_connection_id)
+    conn = await _repo.get_business_connection(conn_id)
     if not conn:
-        return {"connected": False, "connection_id": _active_connection_id, "is_enabled": False}
+        return {"connected": False, "connection_id": conn_id, "is_enabled": False}
     return {
         "connected": True,
         "connection_id": conn["connection_id"],
@@ -177,22 +375,30 @@ async def connection_status():
 
 @app.post("/api/connection/disable", dependencies=[Depends(verify_token)])
 async def connection_disable():
-    if _repo is None or not _active_connection_id:
+    if _repo is None:
+        raise HTTPException(status_code=503, detail="Repository not ready")
+    conn_id = await _get_active_conn_id()
+    if not conn_id:
         raise HTTPException(status_code=503, detail="No active connection")
-    updated = await _repo.set_connection_enabled(_active_connection_id, False)
+    updated = await _repo.set_connection_enabled(conn_id, False)
     if not updated:
         raise HTTPException(status_code=404, detail="Connection not found")
-    return {"status": "disabled", "connection_id": _active_connection_id}
-
+    return {"status": "disabled", "connection_id": conn_id}
 
 @app.post("/api/connection/enable", dependencies=[Depends(verify_token)])
 async def connection_enable():
-    if _repo is None or not _active_connection_id:
+    if _repo is None:
+        raise HTTPException(status_code=503, detail="Repository not ready")
+    conn_id = await _get_active_conn_id()
+    if not conn_id:
         raise HTTPException(status_code=503, detail="No active connection")
-    updated = await _repo.set_connection_enabled(_active_connection_id, True)
+    updated = await _repo.set_connection_enabled(conn_id, True)
     if not updated:
         raise HTTPException(status_code=404, detail="Connection not found")
-    return {"status": "enabled", "connection_id": _active_connection_id}
+    return {"status": "enabled", "connection_id": conn_id}
+
+
+
 
 
 # ── Settings (runtime AI style prompt) ───────────────────────────────────────

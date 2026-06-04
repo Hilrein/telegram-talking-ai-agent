@@ -628,6 +628,300 @@
       border-radius: 4px;
       font-size: 11px;
     }
+
+    /* ── Agent panel ─────────────────────────────────────────── */
+    .agent-subtabs {
+      display: flex;
+      gap: 0;
+      background: var(--btn-secondary-bg);
+      border-radius: 10px;
+      padding: 3px;
+      margin-bottom: 16px;
+    }
+    .agent-subtab {
+      flex: 1;
+      padding: 9px 12px;
+      font-family: var(--font);
+      font-size: 13px;
+      font-weight: 500;
+      border: none;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .agent-subtab.active {
+      background: var(--card-bg);
+      color: var(--text-primary);
+      font-weight: 600;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    .agent-subpanel {
+  display: none;
+  flex-direction: column;
+  gap: 0;
+}
+.agent-subpanel.active {
+  display: flex;
+}
+
+/* Sessions Ribbon */
+.agent-sessions-ribbon {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none; /* Firefox */
+}
+.agent-sessions-ribbon::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+.agent-sessions-list {
+  display: flex;
+  gap: 8px;
+  flex: 1;
+}
+.agent-session-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--card-bg);
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 16px;
+  padding: 6px 12px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+.agent-session-tab.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.btn-session-del {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: inherit;
+  opacity: 0.6;
+  cursor: pointer;
+  padding: 0;
+  transition: opacity 0.2s;
+}
+.btn-session-del:hover {
+  opacity: 1;
+}
+.btn-new-agent-chat {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(0,122,255,0.1);
+  color: var(--accent);
+  border: none;
+  border-radius: 16px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s ease;
+}
+.btn-new-agent-chat:hover {
+  background: rgba(0,122,255,0.2);
+}
+.session-loading {
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 6px;
+}
+
+    /* Chat messages area */
+    .agent-chat-messages {
+      background: var(--card-bg);
+      border-radius: 14px;
+      padding: 16px;
+      min-height: 340px;
+      max-height: 50vh;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+
+    /* Chat bubbles */
+    .agent-bubble {
+      max-width: 82%;
+      padding: 10px 14px;
+      border-radius: 16px;
+      font-size: 14px;
+      line-height: 1.5;
+      word-break: break-word;
+      animation: fadeIn 0.2s ease forwards;
+    }
+    .agent-bubble.user {
+      align-self: flex-end;
+      background: var(--accent);
+      color: #fff;
+      border-bottom-right-radius: 4px;
+    }
+    .agent-bubble.assistant {
+      align-self: flex-start;
+      background: var(--bg);
+      color: var(--text-primary);
+      border-bottom-left-radius: 4px;
+    }
+    .agent-bubble.tool {
+      align-self: flex-start;
+      background: rgba(0,122,255,0.06);
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-family: 'SF Mono', 'Menlo', monospace;
+      border-bottom-left-radius: 4px;
+      border: 1px solid rgba(0,122,255,0.1);
+    }
+    .agent-bubble .bubble-meta {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+      font-weight: 500;
+    }
+    .agent-bubble.user .bubble-meta { color: rgba(255,255,255,0.7); }
+    .agent-bubble.thinking {
+      align-self: flex-start;
+      background: var(--bg);
+      color: var(--text-muted);
+      font-style: italic;
+    }
+
+    /* Chat input bar */
+    .agent-chat-input-bar {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .agent-chat-input-bar input {
+      flex: 1;
+      padding: 12px 14px;
+      border: 1px solid rgba(0,0,0,0.08);
+      border-radius: 12px;
+      font-family: var(--font);
+      font-size: 14px;
+      background: var(--card-bg);
+      color: var(--text-primary);
+      outline: none;
+      transition: border-color 0.2s ease;
+    }
+    .agent-chat-input-bar input:focus {
+      border-color: var(--accent);
+    }
+    .btn-agent-send {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      border: none;
+      background: var(--accent);
+      color: #fff;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.15s ease;
+      flex-shrink: 0;
+    }
+    .btn-agent-send:active { opacity: 0.8; }
+    .btn-agent-send:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* Task cards */
+    .agent-tasks-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .task-card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 14px 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      animation: fadeIn 0.25s ease forwards;
+    }
+    .task-card-info { flex: 1; min-width: 0; }
+    .task-card-type {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--accent);
+    }
+    .task-card-prompt {
+      font-size: 13px;
+      color: var(--text-primary);
+      margin-top: 2px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .task-card-time {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+    .btn-task-delete {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: none;
+      background: rgba(207,60,60,0.08);
+      color: #CF3C3C;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.15s ease;
+    }
+    .btn-task-delete:active { background: rgba(207,60,60,0.15); }
+
+    /* Agent select & input */
+    .agent-select, .agent-input {
+      padding: 10px 14px;
+      border: 1px solid rgba(0,0,0,0.08);
+      border-radius: 10px;
+      font-family: var(--font);
+      font-size: 14px;
+      color: var(--text-primary);
+      background: var(--card-bg);
+      outline: none;
+      transition: border-color 0.2s ease;
+      width: 100%;
+    }
+    .agent-select:focus, .agent-input:focus { border-color: var(--accent); }
+    .agent-textarea {
+      width: 100%;
+      min-height: 70px;
+      padding: 10px 14px;
+      border: 1px solid rgba(0,0,0,0.08);
+      border-radius: 10px;
+      font-family: var(--font);
+      font-size: 14px;
+      color: var(--text-primary);
+      background: var(--card-bg);
+      outline: none;
+      resize: vertical;
+      transition: border-color 0.2s ease;
+    }
+    .agent-textarea:focus { border-color: var(--accent); }
   </style>
 </head>
 <body>
@@ -635,11 +929,11 @@
   <div id="login-screen" class="login-screen hidden">
     <div class="login-card">
       <h1>AI Agent</h1>
-      <p class="login-sub">Введите API-токен для доступа</p>
+      <p class="login-sub">Введите пароль для доступа</p>
       <input id="login-token" type="password" placeholder="BUSINESS_API_TOKEN" autocomplete="off" />
       <button id="btn-login" class="btn-submit">Войти</button>
       <div id="login-error" class="login-error"></div>
-      <p class="login-hint">Токен задан в файле <code>.env</code> (переменная <code>BUSINESS_API_TOKEN</code>)</p>
+      <p class="login-hint">Пароль задан в файле <code>.env</code> (переменная <code>BUSINESS_API_TOKEN</code>)</p>
     </div>
   </div>
 
@@ -655,6 +949,7 @@
       <button class="tab active" data-tab="contacts" id="tab-contacts">Контакты</button>
       <button class="tab" data-tab="import" id="tab-import">Импорт</button>
       <button class="tab" data-tab="settings" id="tab-settings">Настройки</button>
+      <button class="tab" data-tab="agent" id="tab-agent">ИИ-агент</button>
     </nav>
 
     <!-- Contacts Tab -->
@@ -727,6 +1022,78 @@
       </div>
     </section>
 
+    <!-- Agent Tab -->
+    <section id="panel-agent" class="panel">
+      <!-- Sub-tabs inside the agent panel -->
+      <div class="agent-subtabs">
+        <button class="agent-subtab active" data-agent-tab="chat">Интерактивный чат</button>
+        <button class="agent-subtab" data-agent-tab="tasks">Авто-задачи</button>
+      </div>
+
+      <!-- Chat Sub-panel -->
+      <div id="agent-chat-panel" class="agent-subpanel active">
+        
+        <!-- Sessions ribbon -->
+        <div class="agent-sessions-ribbon">
+          <div id="agent-sessions-list" class="agent-sessions-list">
+            <span class="session-loading">Загрузка чатов...</span>
+          </div>
+          <button id="btn-new-agent-chat" class="btn-new-agent-chat" title="Новый чат">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Новый чат
+          </button>
+        </div>
+
+        <div id="agent-chat-messages" class="agent-chat-messages">
+          <div class="empty-state">
+            <span class="empty-icon">🤖</span>
+            <span>Начните диалог с ИИ-агентом.<br/>Он может искать файлы, управлять Git и делать бэкапы.</span>
+          </div>
+        </div>
+        <div class="agent-chat-input-bar">
+          <input id="agent-chat-input" type="text" placeholder="Напишите сообщение агенту…" autocomplete="off" />
+          <button id="btn-agent-send" class="btn-agent-send" title="Отправить">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Tasks Sub-panel -->
+      <div id="agent-tasks-panel" class="agent-subpanel">
+        <div class="panel-header">
+          <span class="section-title">Автоматические задачи</span>
+        </div>
+        <div id="agent-tasks-list" class="agent-tasks-list">
+          <div class="loading"><div class="spinner"></div><span>Загрузка задач…</span></div>
+        </div>
+
+        <div class="panel-header" style="margin-top:12px;">
+          <span class="section-title">Новая задача</span>
+        </div>
+        <div class="settings-card">
+          <div class="field">
+            <label for="task-type">Расписание</label>
+            <select id="task-type" class="agent-select">
+              <option value="every_hour">Каждый час</option>
+              <option value="every_day">Каждый день</option>
+              <option value="every_week">Каждую неделю (Пн)</option>
+            </select>
+          </div>
+          <div class="field" id="task-time-field">
+            <label for="task-time">Время (ЧЧ:ММ)</label>
+            <input id="task-time" type="text" placeholder="09:00" class="agent-input" />
+            <span class="field-hint">Не требуется для "Каждый час"</span>
+          </div>
+          <div class="field">
+            <label for="task-prompt">Промпт для агента</label>
+            <textarea id="task-prompt" class="agent-textarea" placeholder="Например: Сделай бэкап базы данных PostgreSQL"></textarea>
+          </div>
+          <button class="btn-submit" id="btn-add-task">Добавить задачу</button>
+          <div id="task-status" class="import-status hidden"></div>
+        </div>
+      </div>
+    </section>
+
     <!-- History Modal -->
     <div id="history-modal" class="modal hidden">
       <div class="modal-content">
@@ -744,6 +1111,7 @@
     </div>
   </div>
 
+  <script src="/static/app.js?v=3"></script>
   <script>
     /* ── Tab routing ──────────────────────────────────────────── */
     document.querySelectorAll('.tab').forEach(btn => {
@@ -1030,7 +1398,7 @@
 
     async function loadConnectionStatus() {
       try {
-        const res = await api.authFetch('/api/connection/status');
+        const res = await window.api.authFetch('/api/connection/status');
         if (res.status === 401 || res.status === 403) {
           connBadge.classList.add('unknown');
           connBadgeText.textContent = 'нет доступа';
@@ -1048,7 +1416,7 @@
 
     async function loadStylePrompt() {
       try {
-        const res = await api.authFetch('/api/settings/style');
+        const res = await window.api.authFetch('/api/settings/style');
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         styleInput.value = data.value || '';
@@ -1063,7 +1431,7 @@
     document.getElementById('btn-save-style').addEventListener('click', async () => {
       const value = styleInput.value;
       try {
-        const res = await api.authFetch('/api/settings/style', {
+        const res = await window.api.authFetch('/api/settings/style', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ value }),
@@ -1083,7 +1451,7 @@
 
     document.getElementById('btn-conn-enable').addEventListener('click', async () => {
       try {
-        const res = await api.authFetch('/api/connection/enable', { method: 'POST' });
+        const res = await window.api.authFetch('/api/connection/enable', { method: 'POST' });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         await loadConnectionStatus();
       } catch (e) { alert(`Ошибка: ${e.message}`); }
@@ -1092,7 +1460,7 @@
     document.getElementById('btn-conn-disable').addEventListener('click', async () => {
       if (!confirm('Отключить бота от бизнес-аккаунта? Он перестанет отвечать на сообщения.')) return;
       try {
-        const res = await api.authFetch('/api/connection/disable', { method: 'POST' });
+        const res = await window.api.authFetch('/api/connection/disable', { method: 'POST' });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         await loadConnectionStatus();
       } catch (e) { alert(`Ошибка: ${e.message}`); }
@@ -1103,11 +1471,288 @@
       loadStylePrompt();
     });
 
+    /* ── Agent panel: sub-tabs ───────────────────────────────── */
+    document.querySelectorAll('.agent-subtab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.agent-subtab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.agent-subpanel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        const target = btn.dataset.agentTab;
+        document.getElementById(`agent-${target}-panel`).classList.add('active');
+      });
+    });
+
+    /* ── Agent chat & Sessions ──────────────────────────────────────────── */
+    let agentSessionId = null;
+
+    async function loadAgentSessions() {
+      const list = document.getElementById('agent-sessions-list');
+      try {
+        const res = await window.api.authFetch('/api/agent/chats');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        const sessions = data.sessions || [];
+        
+        if (sessions.length === 0) {
+          await createNewAgentChat();
+          return;
+        }
+
+        renderAgentSessions(sessions);
+        
+        // If current session is not in the list, pick the first one
+        if (!agentSessionId || !sessions.find(s => s.session_id === agentSessionId)) {
+          switchSession(sessions[0].session_id);
+        }
+      } catch (e) {
+        list.innerHTML = `<span style="color:red;font-size:12px;">Ошибка: ${e.message}</span>`;
+      }
+    }
+
+    function renderAgentSessions(sessions) {
+      const list = document.getElementById('agent-sessions-list');
+      list.innerHTML = '';
+      sessions.forEach(s => {
+        const tab = document.createElement('div');
+        tab.className = `agent-session-tab ${s.session_id === agentSessionId ? 'active' : ''}`;
+        tab.innerHTML = `
+          <span>${esc(s.title || 'Новый чат')}</span>
+          <button class="btn-session-del" title="Удалить чат">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        `;
+        tab.querySelector('span').addEventListener('click', () => switchSession(s.session_id));
+        tab.querySelector('.btn-session-del').addEventListener('click', async (e) => {
+          e.stopPropagation();
+          if (!confirm('Удалить этот чат и его историю?')) return;
+          try {
+            const res = await window.api.authFetch(`/api/agent/chats/${s.session_id}`, { method: 'DELETE' });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            loadAgentSessions();
+          } catch (err) {
+            alert(`Ошибка удаления: ${err.message}`);
+          }
+        });
+        list.appendChild(tab);
+      });
+    }
+
+    async function switchSession(id) {
+      agentSessionId = id;
+      document.querySelectorAll('.agent-session-tab').forEach(t => t.classList.remove('active'));
+      loadAgentSessions(); // Re-render to show active tab
+      loadAgentHistory();
+    }
+
+    async function createNewAgentChat() {
+      try {
+        const res = await window.api.authFetch('/api/agent/chats', { method: 'POST' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        agentSessionId = data.session_id;
+        loadAgentSessions();
+        loadAgentHistory();
+      } catch (e) {
+        alert(`Ошибка создания чата: ${e.message}`);
+      }
+    }
+
+    document.getElementById('btn-new-agent-chat').addEventListener('click', createNewAgentChat);
+
+    async function sendAgentMessage() {
+      const input = document.getElementById('agent-chat-input');
+      const btn = document.getElementById('btn-agent-send');
+      const msg = input.value.trim();
+      if (!msg) return;
+
+      input.value = '';
+      btn.disabled = true;
+      appendAgentBubble('user', msg);
+      appendAgentBubble('thinking', 'Агент думает…');
+
+      try {
+        const res = await window.api.authFetch('/api/agent/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: msg, session_id: agentSessionId }),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        removeThinking();
+        appendAgentBubble('assistant', data.response);
+        // Refresh sessions to update title if it's the first message
+        loadAgentSessions();
+      } catch (e) {
+        removeThinking();
+        appendAgentBubble('assistant', `Ошибка: ${e.message}`);
+      } finally {
+        btn.disabled = false;
+        input.focus();
+      }
+    }
+
+    function appendAgentBubble(role, text) {
+      const container = document.getElementById('agent-chat-messages');
+      // Remove empty-state if present
+      const empty = container.querySelector('.empty-state');
+      if (empty) empty.remove();
+
+      const bubble = document.createElement('div');
+      bubble.className = `agent-bubble ${role}`;
+      const label = role === 'user' ? 'Вы' : role === 'thinking' ? '' : 'Агент';
+      bubble.innerHTML = label ? `<div class="bubble-meta">${label}</div>${esc(text).replace(/\n/g, '<br/>')}` : esc(text);
+      container.appendChild(bubble);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function removeThinking() {
+      const container = document.getElementById('agent-chat-messages');
+      const thinking = container.querySelector('.agent-bubble.thinking');
+      if (thinking) thinking.remove();
+    }
+
+    document.getElementById('btn-agent-send').addEventListener('click', sendAgentMessage);
+    document.getElementById('agent-chat-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendAgentMessage(); }
+    });
+
+    /* ── Agent tasks ─────────────────────────────────────────── */
+    async function loadAgentTasks() {
+      const list = document.getElementById('agent-tasks-list');
+      list.innerHTML = '<div class="loading"><div class="spinner"></div><span>Загрузка задач…</span></div>';
+      try {
+        const res = await window.api.authFetch('/api/agent/tasks');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        renderAgentTasks(data.tasks || []);
+      } catch (e) {
+        list.innerHTML = `<div class="empty-state"><span class="empty-icon">⚠️</span><span>Ошибка: ${e.message}</span></div>`;
+      }
+    }
+
+    const TASK_TYPE_LABELS = {
+      'every_hour': '⏱ Каждый час',
+      'every_day': '📅 Каждый день',
+      'every_week': '📆 Каждую неделю',
+    };
+
+    function renderAgentTasks(tasks) {
+      const list = document.getElementById('agent-tasks-list');
+      if (!tasks.length) {
+        list.innerHTML = '<div class="empty-state"><span class="empty-icon">📋</span><span>Нет автоматических задач.<br/>Добавьте первую ниже.</span></div>';
+        return;
+      }
+      list.innerHTML = '';
+      tasks.forEach((t, i) => {
+        const card = document.createElement('div');
+        card.className = 'task-card';
+        card.style.animationDelay = `${i * 40}ms`;
+        const timeStr = t.execution_time ? ` в ${t.execution_time}` : '';
+        card.innerHTML = `
+          <div class="task-card-info">
+            <div class="task-card-type">${TASK_TYPE_LABELS[t.task_type] || t.task_type}</div>
+            <div class="task-card-prompt">${esc(t.prompt)}</div>
+            <div class="task-card-time">${timeStr}</div>
+          </div>
+          <button class="btn-task-delete" title="Удалить" data-task-id="${t.id}">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          </button>`;
+
+        card.querySelector('.btn-task-delete').addEventListener('click', async () => {
+          if (!confirm('Удалить эту автоматическую задачу?')) return;
+          try {
+            await window.api.deleteAgentTask(t.id);
+            loadAgentTasks();
+          } catch (err) { alert(`Ошибка: ${err.message}`); }
+        });
+
+        list.appendChild(card);
+      });
+    }
+
+    /* ── Task type toggle for time field visibility ──────────── */
+    document.getElementById('task-type').addEventListener('change', () => {
+      const type = document.getElementById('task-type').value;
+      const timeField = document.getElementById('task-time-field');
+      timeField.style.display = type === 'every_hour' ? 'none' : 'flex';
+    });
+    // initialize
+    document.getElementById('task-type').dispatchEvent(new Event('change'));
+
+    document.getElementById('btn-add-task').addEventListener('click', async () => {
+      const taskType = document.getElementById('task-type').value;
+      const taskTime = document.getElementById('task-time').value.trim();
+      const taskPrompt = document.getElementById('task-prompt').value.trim();
+      const statusEl = document.getElementById('task-status');
+
+      if (!taskPrompt) {
+        statusEl.textContent = 'Введите промпт для агента';
+        statusEl.className = 'import-status error';
+        return;
+      }
+      if (taskType !== 'every_hour' && !taskTime) {
+        statusEl.textContent = 'Укажите время выполнения (ЧЧ:ММ)';
+        statusEl.className = 'import-status error';
+        return;
+      }
+
+      try {
+        const body = {
+          task_type: taskType,
+          prompt: taskPrompt,
+        };
+        if (taskType !== 'every_hour') body.execution_time = taskTime;
+
+        await window.api.createAgentTask(body);
+        statusEl.textContent = '✅ Задача добавлена!';
+        statusEl.className = 'import-status success';
+        document.getElementById('task-prompt').value = '';
+        document.getElementById('task-time').value = '';
+        loadAgentTasks();
+      } catch (e) {
+        statusEl.textContent = `❌ ${e.message}`;
+        statusEl.className = 'import-status error';
+      }
+    });
+
+    /* ── Load agent data when the tab is activated ───────────── */
+    document.querySelector('[data-tab="agent"]').addEventListener('click', () => {
+      loadAgentTasks();
+      loadAgentSessions();
+    });
+
+    async function loadAgentHistory() {
+      if (!agentSessionId) return;
+      const container = document.getElementById('agent-chat-messages');
+      container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+      try {
+        const data = await window.api.getAgentHistory(agentSessionId);
+        const msgs = data.messages || [];
+        container.innerHTML = '';
+        if (msgs.length === 0) {
+          container.innerHTML = `
+            <div class="empty-state">
+              <span class="empty-icon">🤖</span>
+              <span>Начните диалог с ИИ-агентом.<br/>Он может искать файлы, выполнять команды и делать бэкапы.</span>
+            </div>
+          `;
+          return;
+        }
+        msgs.forEach(m => {
+          if (m.role === 'user' || m.role === 'assistant') {
+            appendAgentBubble(m.role, m.content);
+          }
+        });
+      } catch (e) {
+        container.innerHTML = `<div class="empty-state"><span>Ошибка загрузки истории</span></div>`;
+      }
+    }
+
     /* ── Init ─────────────────────────────────────────────────── */
-    if (api.isAuthed()) {
+    if (window.api.isAuthed()) {
       loadContacts();
     }
   </script>
-  <script src="app.js"></script>
+
 </body>
 </html>

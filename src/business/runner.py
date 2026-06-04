@@ -10,12 +10,14 @@ from dotenv import load_dotenv
 
 from ..config import load_config
 from ..database.repository import Repository
+from ..database.agent_repository import AgentRepository
 from ..ai.nvidia_client import NvidiaClient
-from ..api_server import app as fastapi_app, configure as configure_api
+from .. import app as fastapi_app, configure as configure_api
 from .bot_api import BotApiClient
 from .handler import BusinessHandler
 from .pending_store import PendingStore
 from .audio_service import AudioService
+from .scheduler import init_scheduler, shutdown_scheduler
 
 logger = logging.getLogger(__name__)
 console = Console()
@@ -119,12 +121,28 @@ async def run_business_bot() -> int:
                 context_months=config.context_months,
             )
             
+            agent_db_path = config.agent_data_dir / "agent_memory.db" if config.agent_data_dir else None
+            
             configure_api(
                 repo=repo,
                 owner_name=config.owner_name,
                 api_token=config.business_api_token,
                 handler=handler,
+                ai_client=ai_client,
+                agent_db_path=agent_db_path,
             )
+
+            # ── Start the autonomous task scheduler ─────────────
+            if config.agent_data_dir:
+                try:
+                    await init_scheduler(
+                        ai_client=ai_client,
+                        agent_db_path=agent_db_path,
+                    )
+                    console.print("[bold green]📅 Scheduler started[/bold green]")
+                except Exception as exc:
+                    logger.error("Failed to start scheduler: %s", exc, exc_info=True)
+                    console.print(f"[yellow]⚠️  Scheduler failed to start: {exc}[/yellow]")
 
             await bot.send_message(
                 config.business_owner_chat_id,
@@ -149,6 +167,12 @@ async def run_business_bot() -> int:
         logger.exception("Business bot crashed")
         return 1
     finally:
+        # ── Shut down scheduler first ───────────────────────────
+        try:
+            await shutdown_scheduler()
+        except Exception:
+            pass
+
         if ngrok_tunnel:
             try:
                 pyngrok_ngrok.disconnect(ngrok_tunnel.public_url)

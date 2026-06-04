@@ -75,7 +75,7 @@ class BusinessHandler:
 
     def set_active_connection_id(self, conn_id: str) -> None:
         try:
-            from ..api_server import _active_connection_id as _glb  # type: ignore
+            from .. import _active_connection_id as _glb  # type: ignore
             import api_server as _api_mod
             _api_mod._active_connection_id = conn_id
         except Exception as e:

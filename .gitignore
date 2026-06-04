@@ -17,6 +17,7 @@ env/
 data/*.db
 data/*.session
 *.session
+agent-data/
 
 # Google OAuth secrets
 client_secret.json

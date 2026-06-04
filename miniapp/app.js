@@ -100,9 +100,52 @@ class ApiClient {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return res.json();
   }
+
+  /* ── Agent API endpoints ── */
+  
+  async getAgentTasks() {
+    const res = await this.authFetch('/api/agent/tasks');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  }
+
+  async createAgentTask(taskData) {
+    const res = await this.authFetch('/api/agent/tasks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(taskData),
+    });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      throw new Error(d.detail || `HTTP ${res.status}`);
+    }
+    return res.json();
+  }
+
+  async deleteAgentTask(taskId) {
+    const res = await this.authFetch(`/api/agent/tasks/${taskId}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  }
+
+  async sendAgentMessage(message, sessionId = 'web_default') {
+    const res = await this.authFetch('/api/agent/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message, session_id: sessionId }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  }
+
+  async getAgentHistory(sessionId = 'web_default') {
+    const res = await this.authFetch(`/api/agent/history?session_id=${sessionId}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  }
 }
 
-const api = new ApiClient();
+window.api = new ApiClient();
 
 /* ── Login screen ──────────────────────────────────────────── */
 function showLogin() {
